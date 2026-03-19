@@ -1,4 +1,4 @@
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const db = require("../db");
 const { logActivity } = require("./activityLogController");
@@ -35,7 +35,8 @@ async function register(req, res) {
       });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
     const avatarInitials = full_name
       .split(" ")
       .filter(Boolean)
@@ -93,13 +94,24 @@ async function login(req, res) {
     }
 
     const user = rows[0];
+    let isMatch = false;
 
     if (user.is_active === 0) {
       return res.status(401).json({ message: "User is inactive" });
     }
 
-    // Temporary plain-text comparison for environments where password_hash stores plain text.
-    if ((user.password_hash || "") !== password) {
+    console.log("[AUTH] User found:", user.email);
+
+    if (/^\$2[aby]\$/.test(user.password_hash || "")) {
+      isMatch = await bcrypt.compare(password, user.password_hash);
+    } else {
+      // Fallback for legacy plain-text passwords.
+      isMatch = password === user.password_hash;
+    }
+
+    console.log("[AUTH] Password match:", isMatch);
+
+    if (!isMatch) {
       return res.status(401).json({ message: "Invalid password" });
     }
 

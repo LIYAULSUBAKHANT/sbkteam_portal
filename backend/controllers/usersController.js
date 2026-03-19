@@ -1,5 +1,5 @@
 const db = require("../db");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 const { logActivity } = require("./activityLogController");
 
 async function createUser(req, res) {
@@ -48,7 +48,8 @@ async function createUser(req, res) {
     }
 
     const resolvedPassword = password || "1234";
-    const passwordHash = await bcrypt.hash(resolvedPassword, 10);
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(resolvedPassword, saltRounds);
     const resolvedAvatarInitials =
       avatar_initials ||
       full_name
