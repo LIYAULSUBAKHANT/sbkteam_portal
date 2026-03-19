@@ -1,0 +1,10 @@
+[DB] dotenv loaded from: D:\College\WebDev\sbk_portsl\group\backend\.env
+[DB] Connection config: {
+  host: 'localhost',
+  user: 'root',
+  database: 'sbk_portal',
+  password: 'ja***.'
+}
+Server running on port 3011 
+[DB] MySQL connection established successfully.
+[DB] Startup connection test passed.
