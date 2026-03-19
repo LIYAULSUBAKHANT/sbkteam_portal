@@ -101,14 +101,17 @@ async function login(req, res) {
     }
 
     console.log("[AUTH] User found:", user.email);
+    console.log("Stored password:", user.password_hash);
+    console.log("Entered password:", password);
 
-    if (/^\$2[aby]\$/.test(user.password_hash || "")) {
+    if ((user.password_hash || "").startsWith("$2b$") || /^\$2[ay]\$/.test(user.password_hash || "")) {
       isMatch = await bcrypt.compare(password, user.password_hash);
     } else {
       // Fallback for legacy plain-text passwords.
       isMatch = password === user.password_hash;
     }
 
+    console.log("Match result:", isMatch);
     console.log("[AUTH] Password match:", isMatch);
 
     if (!isMatch) {
