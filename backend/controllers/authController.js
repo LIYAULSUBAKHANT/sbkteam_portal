@@ -82,10 +82,7 @@ async function login(req, res) {
 
     console.log("[AUTH] Login attempt:", email);
 
-    const [rows] = await db.query(
-      "SELECT id, full_name, email, password_hash, role_id, is_active FROM users WHERE email = ?",
-      [email]
-    );
+    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
 
     console.log("[AUTH] Login query rows:", rows);
 
@@ -95,10 +92,7 @@ async function login(req, res) {
 
     const user = rows[0];
     let isMatch = false;
-
-    if (user.is_active === 0) {
-      return res.status(401).json({ message: "User is inactive" });
-    }
+    const resolvedRoleId = Number(user.role_id) || 5;
 
     console.log("[AUTH] User found:", user.email);
     console.log("Stored password:", user.password_hash);
@@ -126,13 +120,13 @@ async function login(req, res) {
     const token = jwt.sign(
       {
         userId: user.id,
-        roleId: user.role_id
+        roleId: resolvedRoleId
       },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    console.log("[AUTH] Login successful:", { userId: user.id, email: user.email, roleId: user.role_id });
+    console.log("[AUTH] Login successful:", { userId: user.id, email: user.email, roleId: resolvedRoleId });
 
     await logActivity({
       userId: user.id,
@@ -146,19 +140,19 @@ async function login(req, res) {
       message: "Login successful",
       id: user.id,
       email: user.email,
-      role_id: user.role_id,
+      role_id: resolvedRoleId,
       full_name: user.full_name,
       user: {
         id: user.id,
         email: user.email,
-        name: user.full_name
+        full_name: user.full_name
       },
       token
     });
   } catch (error) {
     console.error("[AUTH] Login error:", error);
     return res.status(500).json({
-      message: "Failed to execute login query",
+      message: "Login failed",
       error: error.message
     });
   }

@@ -41,41 +41,48 @@ export default function Login() {
         email: normalizedEmail,
         password,
       })
+      const responseUser = result.user || null
+      const resolvedUserId = result.id || responseUser?.id
+      const resolvedRoleId = result.role_id || responseUser?.role_id || 5
 
-      let storageRole = roleIdToStorageRole(result.role_id)
+      if (!resolvedUserId) {
+        throw new Error("Login response did not include a user id.")
+      }
+
+      let storageRole = roleIdToStorageRole(resolvedRoleId)
 
       persistAuth({
         token: result.token,
-        userId: result.id,
-        roleId: result.role_id,
+        userId: resolvedUserId,
+        roleId: resolvedRoleId,
         role: storageRole,
         email: normalizedEmail,
         rememberMe,
-        user: {
-          id: result.id,
+        user: responseUser || {
+          id: resolvedUserId,
           email: normalizedEmail,
-          name: result.full_name,
-          roleId: result.role_id,
+          full_name: result.full_name,
+          roleId: resolvedRoleId,
           role: storageRole,
         },
       })
 
       try {
-        const user = await apiGet(`/api/users/${result.id}`)
+        const user = await apiGet(`/api/users/${resolvedUserId}`)
         storageRole = user.role_key || storageRole
 
         persistAuth({
           token: result.token,
-          userId: result.id,
-          roleId: result.role_id,
+          userId: resolvedUserId,
+          roleId: resolvedRoleId,
           role: storageRole,
           email: normalizedEmail,
           rememberMe,
           user: {
-            id: result.id,
+            id: resolvedUserId,
             email: normalizedEmail,
-            name: user.full_name || result.full_name,
-            roleId: result.role_id,
+            full_name: user.full_name || result.full_name,
+            roleId: resolvedRoleId,
             role: user.role_key || storageRole,
           },
         })
@@ -83,7 +90,7 @@ export default function Login() {
         // Keep the fallback role if the profile lookup fails.
       }
 
-      router.push(getDashboardRoute(result.role_id))
+      router.push(getDashboardRoute(resolvedRoleId))
     } catch (loginError) {
       console.error("Login request failed:", {
         message: loginError?.message,
