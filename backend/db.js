@@ -22,6 +22,9 @@ const dbConfig = {
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD ?? "",
   database: process.env.DB_NAME,
+  ssl: {
+    rejectUnauthorized: false
+  },
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -30,6 +33,7 @@ const dbConfig = {
 console.log("[DB] dotenv loaded from:", path.join(__dirname, ".env"));
 console.log("[DB] Connection config:", {
   host: dbConfig.host,
+  port: dbConfig.port,
   user: dbConfig.user,
   database: dbConfig.database,
   password: maskSecret(dbConfig.password)

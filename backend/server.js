@@ -20,7 +20,7 @@ const { authenticateToken } = require("./middleware/authMiddleware");
 
 const app = express();
 
-app.use(cors());
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 app.get("/", (req, res) => {
@@ -60,7 +60,7 @@ app.use((error, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 5000;
 
 const server = app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
