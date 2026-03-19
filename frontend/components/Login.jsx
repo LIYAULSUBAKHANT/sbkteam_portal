@@ -93,8 +93,19 @@ export default function Login() {
 
       router.push(getDashboardRoute(result.role_id))
     } catch (loginError) {
+      console.error("Login request failed:", {
+        message: loginError?.message,
+        status: loginError?.status,
+        requestUrl: loginError?.requestUrl,
+        payload: loginError?.payload,
+      })
+
       if (loginError instanceof ApiError) {
-        setError(loginError.message || "Login failed.")
+        if (loginError.status === 404) {
+          setError(`Login route not found. Check NEXT_PUBLIC_API_URL and confirm the backend exposes POST /api/auth/login. (${loginError.requestUrl || "unknown URL"})`)
+        } else {
+          setError(loginError.message || "Login failed.")
+        }
       } else {
         setError("Unable to connect to the server. Please try again.")
       }

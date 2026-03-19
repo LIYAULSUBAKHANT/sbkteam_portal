@@ -1,6 +1,25 @@
 "use client"
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"
+const RAW_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"
+
+function getApiRootUrl() {
+  const normalizedBase = RAW_BASE_URL.replace(/\/+$/, "")
+
+  try {
+    const parsedUrl = new URL(normalizedBase)
+    const apiIndex = parsedUrl.pathname.indexOf("/api")
+
+    parsedUrl.pathname = apiIndex >= 0 ? parsedUrl.pathname.slice(0, apiIndex + 4) : ""
+    parsedUrl.search = ""
+    parsedUrl.hash = ""
+
+    return parsedUrl.toString().replace(/\/+$/, "")
+  } catch {
+    return normalizedBase.replace(/\/api(?:\/.*)?$/, "/api")
+  }
+}
+
+const API_ROOT_URL = getApiRootUrl()
 
 const TOKEN_KEY = "sbk-token"
 const USER_ID_KEY = "userId"
@@ -8,12 +27,24 @@ const ROLE_ID_KEY = "roleId"
 const ROLE_KEY = "role"
 
 export class ApiError extends Error {
-  constructor(message, status, payload) {
+  constructor(message, status, payload, requestUrl) {
     super(message)
     this.name = "ApiError"
     this.status = status
     this.payload = payload
+    this.requestUrl = requestUrl
   }
+}
+
+function buildApiUrl(path) {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`
+  const apiPath = normalizedPath.startsWith("/api/") ? normalizedPath : `/api${normalizedPath}`
+
+  if (API_ROOT_URL.endsWith("/api")) {
+    return `${API_ROOT_URL}${apiPath.replace(/^\/api/, "")}`
+  }
+
+  return `${API_ROOT_URL}${apiPath}`
 }
 
 export function getStoredToken() {
@@ -86,10 +117,10 @@ export function getDashboardRoute(roleId) {
 }
 
 export async function apiRequest(path, options = {}) {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`
-  const requestUrl = `${BASE_URL}${normalizedPath.replace(/^\/api\b/, "")}`
+  const requestUrl = buildApiUrl(path)
   const token = getStoredToken()
   const headers = new Headers(options.headers || {})
+  const method = options.method || "GET"
 
   if (!headers.has("Content-Type") && options.body && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json")
@@ -102,12 +133,18 @@ export async function apiRequest(path, options = {}) {
   let response
 
   try {
+    console.log("[API]", method, requestUrl)
     response = await fetch(requestUrl, {
       ...options,
       headers,
     })
   } catch (error) {
-    throw new ApiError("Failed to fetch.", 0, { cause: error?.message || "Network request failed." })
+    throw new ApiError(
+      "Failed to fetch.",
+      0,
+      { cause: error?.message || "Network request failed." },
+      requestUrl
+    )
   }
 
   let payload = null
@@ -122,7 +159,8 @@ export async function apiRequest(path, options = {}) {
     throw new ApiError(
       payload?.message || "Request failed.",
       response.status,
-      payload
+      payload,
+      requestUrl
     )
   }
 
