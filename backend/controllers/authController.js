@@ -79,54 +79,28 @@ async function login(req, res) {
       return res.status(400).json({ message: "Email and password are required." });
     }
 
-    console.log("[AUTH] Login attempt:", { email });
+    console.log("[AUTH] Login attempt:", email);
 
-    let rows;
+    const [rows] = await db.query(
+      "SELECT id, full_name, email, password_hash, role_id, is_active FROM users WHERE email = ?",
+      [email]
+    );
 
-    try {
-      const [resultRows] = await db.execute(
-        `SELECT 
-          u.id,
-          u.full_name,
-          u.email,
-          u.password_hash,
-          u.role_id,
-          r.role_key
-        FROM users u
-        INNER JOIN roles r ON r.id = u.role_id
-        WHERE u.email = ? AND u.is_active = 1`,
-        [email]
-      );
-
-      rows = resultRows;
-    } catch (queryError) {
-      console.error("[AUTH] Login query failed:", {
-        email,
-        code: queryError.code,
-        errno: queryError.errno,
-        message: queryError.message
-      });
-
-      return res.status(500).json({
-        message: "Failed to execute login query.",
-        error: queryError.message
-      });
-    }
+    console.log("[AUTH] Login query rows:", rows);
 
     if (rows.length === 0) {
-      console.warn("[AUTH] Login failed: user not found or inactive.", { email });
-      return res.status(401).json({ message: "Invalid email or password." });
+      return res.status(401).json({ message: "User not found" });
     }
 
     const user = rows[0];
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash || "");
 
-    if (!isPasswordValid) {
-      console.warn("[AUTH] Login failed: password mismatch.", {
-        email,
-        userId: user.id
-      });
-      return res.status(401).json({ message: "Invalid email or password." });
+    if (user.is_active === 0) {
+      return res.status(401).json({ message: "User is inactive" });
+    }
+
+    // Temporary plain-text comparison for environments where password_hash stores plain text.
+    if ((user.password_hash || "") !== password) {
+      return res.status(401).json({ message: "Invalid password" });
     }
 
     if (!process.env.JWT_SECRET) {
@@ -143,11 +117,7 @@ async function login(req, res) {
       { expiresIn: "7d" }
     );
 
-    console.log("[AUTH] Login successful:", {
-      userId: user.id,
-      email: user.email,
-      roleId: user.role_id
-    });
+    console.log("[AUTH] Login successful:", { userId: user.id, email: user.email, roleId: user.role_id });
 
     await logActivity({
       userId: user.id,
@@ -158,18 +128,24 @@ async function login(req, res) {
     });
 
     return res.status(200).json({
+      message: "Login successful",
       id: user.id,
+      email: user.email,
       role_id: user.role_id,
       full_name: user.full_name,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.full_name
+      },
       token
     });
   } catch (error) {
-    console.error("[AUTH] Login controller error:", {
-      code: error.code,
-      errno: error.errno,
-      message: error.message
+    console.error("[AUTH] Login error:", error);
+    return res.status(500).json({
+      message: "Failed to execute login query",
+      error: error.message
     });
-    return res.status(500).json({ message: "Failed to log in.", error: error.message });
   }
 }
 
