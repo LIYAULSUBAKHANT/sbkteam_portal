@@ -8,49 +8,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ApiError, apiGet, apiPost, clearStoredAuth, getDashboardRoute, getStoredAuth, persistAuth, roleIdToStorageRole } from "@/lib/api"
+import { ApiError, apiGet, apiPost, getDashboardRoute, getStoredAuth, persistAuth, roleIdToStorageRole } from "@/lib/api"
 
 export default function Login() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [rememberMe, setRememberMe] = useState(true)
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCheckingSession, setIsCheckingSession] = useState(true)
 
   useEffect(() => {
-    let ignore = false
+    const currentAuth = getStoredAuth()
+    console.log("Current user:", currentAuth.user ? JSON.stringify(currentAuth.user) : null)
 
-    async function checkStoredSession() {
-      const { token, roleId, userId } = getStoredAuth()
-
-      if (!token || !userId) {
-        if (!ignore) {
-          setIsCheckingSession(false)
-        }
-        return
-      }
-
-      try {
-        await apiGet(`/api/users/${userId}`)
-        if (!ignore) {
-          router.replace(getDashboardRoute(roleId))
-        }
-      } catch {
-        clearStoredAuth()
-        if (!ignore) {
-          setIsCheckingSession(false)
-        }
-      }
+    if (currentAuth.user && window.location.pathname === "/login") {
+      console.log("User already logged in")
     }
 
-    checkStoredSession()
-
-    return () => {
-      ignore = true
-    }
-  }, [router])
+    setIsCheckingSession(false)
+  }, [])
 
   const handleLogin = async (event) => {
     event.preventDefault()
@@ -73,6 +51,13 @@ export default function Login() {
         role: storageRole,
         email: normalizedEmail,
         rememberMe,
+        user: {
+          id: result.id,
+          email: normalizedEmail,
+          name: result.full_name,
+          roleId: result.role_id,
+          role: storageRole,
+        },
       })
 
       try {
@@ -86,6 +71,13 @@ export default function Login() {
           role: storageRole,
           email: normalizedEmail,
           rememberMe,
+          user: {
+            id: result.id,
+            email: normalizedEmail,
+            name: user.full_name || result.full_name,
+            roleId: result.role_id,
+            role: user.role_key || storageRole,
+          },
         })
       } catch {
         // Keep the fallback role if the profile lookup fails.

@@ -25,6 +25,54 @@ const TOKEN_KEY = "sbk-token"
 const USER_ID_KEY = "userId"
 const ROLE_ID_KEY = "roleId"
 const ROLE_KEY = "role"
+const USER_KEY = "user"
+const LEGACY_ROLE_KEY = "sbk-role"
+const LEGACY_EMAIL_KEY = "sbk-email"
+const REMEMBER_ME_KEY = "sbk-remember-me"
+
+function getStorageEntries() {
+  if (typeof window === "undefined") {
+    return []
+  }
+
+  return [window.sessionStorage, window.localStorage]
+}
+
+function getStoredValue(key) {
+  for (const storage of getStorageEntries()) {
+    const value = storage.getItem(key)
+    if (value !== null) {
+      return value
+    }
+  }
+
+  return null
+}
+
+function clearStorageKeys(storage) {
+  storage.removeItem(TOKEN_KEY)
+  storage.removeItem(USER_ID_KEY)
+  storage.removeItem(ROLE_ID_KEY)
+  storage.removeItem(ROLE_KEY)
+  storage.removeItem(USER_KEY)
+  storage.removeItem(LEGACY_ROLE_KEY)
+  storage.removeItem(LEGACY_EMAIL_KEY)
+  storage.removeItem(REMEMBER_ME_KEY)
+}
+
+function getParsedStoredUser() {
+  const rawUser = getStoredValue(USER_KEY)
+
+  if (!rawUser) {
+    return null
+  }
+
+  try {
+    return JSON.parse(rawUser)
+  } catch {
+    return null
+  }
+}
 
 export class ApiError extends Error {
   constructor(message, status, payload, requestUrl) {
@@ -48,43 +96,51 @@ function buildApiUrl(path) {
 }
 
 export function getStoredToken() {
-  if (typeof window === "undefined") {
-    return null
-  }
-
-  return localStorage.getItem(TOKEN_KEY)
+  return getStoredValue(TOKEN_KEY)
 }
 
 export function getStoredAuth() {
   if (typeof window === "undefined") {
-    return { token: null, userId: null, roleId: null, role: null }
+    return { token: null, userId: null, roleId: null, role: null, user: null }
   }
 
   return {
-    token: localStorage.getItem(TOKEN_KEY),
-    userId: localStorage.getItem(USER_ID_KEY),
-    roleId: localStorage.getItem(ROLE_ID_KEY),
-    role: localStorage.getItem(ROLE_KEY) || localStorage.getItem("sbk-role"),
+    token: getStoredValue(TOKEN_KEY),
+    userId: getStoredValue(USER_ID_KEY),
+    roleId: getStoredValue(ROLE_ID_KEY),
+    role: getStoredValue(ROLE_KEY) || getStoredValue(LEGACY_ROLE_KEY),
+    user: getParsedStoredUser(),
   }
 }
 
-export function persistAuth({ token, userId, roleId, role, email, rememberMe }) {
+export function persistAuth({ token, userId, roleId, role, email, rememberMe, user }) {
   if (typeof window === "undefined") {
     return
   }
 
-  localStorage.setItem(TOKEN_KEY, token)
-  localStorage.setItem(USER_ID_KEY, String(userId))
-  localStorage.setItem(ROLE_ID_KEY, String(roleId))
-  localStorage.setItem(ROLE_KEY, role)
-  localStorage.setItem("sbk-role", role)
+  const targetStorage = rememberMe ? window.localStorage : window.sessionStorage
+  const resolvedUser = user || {
+    id: userId,
+    roleId,
+    role,
+    email: email || "",
+  }
+
+  clearStoredAuth()
+
+  targetStorage.setItem(TOKEN_KEY, token)
+  targetStorage.setItem(USER_ID_KEY, String(userId))
+  targetStorage.setItem(ROLE_ID_KEY, String(roleId))
+  targetStorage.setItem(ROLE_KEY, role)
+  targetStorage.setItem(LEGACY_ROLE_KEY, role)
+  targetStorage.setItem(USER_KEY, JSON.stringify(resolvedUser))
 
   if (email) {
-    localStorage.setItem("sbk-email", email)
+    targetStorage.setItem(LEGACY_EMAIL_KEY, email)
   }
 
   if (typeof rememberMe === "boolean") {
-    localStorage.setItem("sbk-remember-me", JSON.stringify(rememberMe))
+    targetStorage.setItem(REMEMBER_ME_KEY, JSON.stringify(rememberMe))
   }
 }
 
@@ -93,13 +149,8 @@ export function clearStoredAuth() {
     return
   }
 
-  localStorage.removeItem(TOKEN_KEY)
-  localStorage.removeItem(USER_ID_KEY)
-  localStorage.removeItem(ROLE_ID_KEY)
-  localStorage.removeItem(ROLE_KEY)
-  localStorage.removeItem("sbk-role")
-  localStorage.removeItem("sbk-email")
-  localStorage.removeItem("sbk-remember-me")
+  clearStorageKeys(window.sessionStorage)
+  clearStorageKeys(window.localStorage)
 }
 
 export function roleIdToStorageRole(roleId) {

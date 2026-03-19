@@ -13,9 +13,10 @@ export default function ProtectedRoute({ children, requireAdmin = false, blockMe
     let ignore = false
 
     async function verifyAccess() {
-      const { token, roleId, userId } = getStoredAuth()
+      const { token, roleId, userId, user } = getStoredAuth()
+      console.log("Current user:", user ? JSON.stringify(user) : null)
 
-      if (!token || !userId) {
+      if (!token || !userId || !user) {
         router.replace("/login")
         return
       }

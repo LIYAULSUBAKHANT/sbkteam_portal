@@ -600,7 +600,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
 
   function handleLogout() {
     clearStoredAuth()
-    router.push("/login")
+    window.location.href = "/login"
   }
 
   function resetMemberForm() {

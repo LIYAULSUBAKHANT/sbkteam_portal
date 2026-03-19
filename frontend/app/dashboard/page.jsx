@@ -9,9 +9,10 @@ export default function DashboardPage() {
   const router = useRouter()
 
   useEffect(() => {
-    const { token, roleId } = getStoredAuth()
+    const { token, roleId, user } = getStoredAuth()
+    console.log("Current user:", user ? JSON.stringify(user) : null)
 
-    if (!token) {
+    if (!token || !user) {
       router.replace("/login")
       return
     }
