@@ -3,7 +3,10 @@ const { logActivity } = require("./activityLogController");
 
 async function createTeam(req, res) {
   try {
-    const { name, description, lead_user_id } = req.body;
+    const { name, description, lead_user_id, lead_id } = req.body;
+    const leadId = lead_user_id || lead_id || null;
+
+    console.log("Route hit: POST /api/teams", { name, description, leadId });
 
     if (!name) {
       return res.status(400).json({ message: "Team name is required." });
@@ -12,7 +15,7 @@ async function createTeam(req, res) {
     const [result] = await db.execute(
       `INSERT INTO teams (name, description, lead_user_id)
        VALUES (?, ?, ?)`,
-      [name, description || null, lead_user_id || null]
+      [name, description || null, leadId]
     );
 
     await logActivity({
@@ -131,10 +134,14 @@ async function addMembersToTeam(req, res) {
     const { teamId } = req.params;
     const { memberIds } = req.body;
 
-    console.log("Route hit: PUT /api/teams/" + teamId + "/add-members", { memberIds })
+    console.log("Route hit: PUT /api/teams/" + teamId + "/add-members", { memberIds });
 
     if (!Array.isArray(memberIds) || memberIds.length === 0) {
       return res.status(400).json({ message: "memberIds must be a non-empty array." });
+    }
+
+    if (memberIds.some((id) => !Number.isInteger(Number(id)) || Number(id) <= 0)) {
+      return res.status(400).json({ message: "Invalid member list" });
     }
 
     const normalizedMemberIds = memberIds
