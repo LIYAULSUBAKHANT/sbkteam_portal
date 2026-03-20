@@ -14,6 +14,6 @@ router.post("/", allowLeadersOnly, createProject);
 router.get("/", getAllProjects);
 router.get("/team/:teamId", getProjectsByTeam);
 router.patch("/:id", allowLeadersOnly, updateProject);
-router.delete("/:id", allowRoles("captain"), deleteProject);
+router.delete("/:id", allowLeadersOnly, deleteProject);
 
 module.exports = router;

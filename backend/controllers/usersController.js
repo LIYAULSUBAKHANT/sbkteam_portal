@@ -225,20 +225,23 @@ async function createUser(req, res) {
 
 async function getAllUsers(req, res) {
   try {
-    let query = `${userSelectClause} WHERE u.is_active = 1`;
-    const params = [];
+    const role = req.user.roleName || "Member";
 
-    if (req.user.roleKey !== "captain") {
-      query += " AND u.team_id = ?";
-      params.push(req.user.teamId || 0);
+    const leaderRoles = ["Captain", "Vice Captain", "Manager", "Strategist"];
+
+    if (role === "Member") {
+      const [rows] = await db.execute(`${userSelectClause} WHERE u.id = ? AND u.is_active = 1`, [req.user.id]);
+      return res.status(200).json(rows);
     }
 
-    query += " ORDER BY u.id ASC";
+    if (leaderRoles.includes(role)) {
+      const [rows] = await db.execute(`${userSelectClause} WHERE u.is_active = 1 ORDER BY u.id ASC`);
+      return res.status(200).json(rows);
+    }
 
-    const [rows] = await db.execute(query, params);
-
-    return res.status(200).json(rows);
+    return res.status(403).json({ message: "You do not have permission to view users." });
   } catch (error) {
+    console.error("GET ALL USERS ERROR:", error);
     return res.status(500).json({ message: "Failed to fetch users.", error: error.message });
   }
 }
@@ -246,28 +249,31 @@ async function getAllUsers(req, res) {
 async function getUserById(req, res) {
   try {
     const { id } = req.params;
-    const isLeader = req.user.roleKey !== "member";
+    const role = req.user.roleName || "Member";
 
-    if (!isLeader && Number(id) !== req.user.id) {
+    const leaderRoles = ["Captain", "Vice Captain", "Manager", "Strategist"];
+
+    if (role === "Member" && Number(id) !== req.user.id) {
       return res.status(403).json({ message: "Members can only view their own profile." });
     }
 
-    const [rows] = await db.execute(`${userSelectClause} WHERE u.id = ?`, [id]);
+    const [rows] = await db.execute(`${userSelectClause} WHERE u.id = ? AND u.is_active = 1`, [id]);
 
     if (rows.length === 0) {
       return res.status(404).json({ message: "User not found." });
     }
 
-    if (
-      req.user.roleKey !== "captain" &&
-      isLeader &&
-      rows[0].team_id !== req.user.teamId
-    ) {
-      return res.status(403).json({ message: "Leaders can only view members from their own team." });
+    if (role === "Member" && Number(id) === req.user.id) {
+      return res.status(200).json(rows[0]);
     }
 
-    return res.status(200).json(rows[0]);
+    if (leaderRoles.includes(role)) {
+      return res.status(200).json(rows[0]);
+    }
+
+    return res.status(403).json({ message: "You do not have permission to view this user." });
   } catch (error) {
+    console.error("GET USER BY ID ERROR:", error);
     return res.status(500).json({ message: "Failed to fetch user.", error: error.message });
   }
 }

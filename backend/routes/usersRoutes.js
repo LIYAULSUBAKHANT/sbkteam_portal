@@ -5,7 +5,7 @@ const { allowLeadersOnly, allowRoles } = require("../middleware/roleMiddleware")
 const router = express.Router();
 
 router.post("/", allowRoles("captain"), createUser);
-router.get("/", allowLeadersOnly, getAllUsers);
+router.get("/", getAllUsers);
 router.get("/leaderboard", getLeaderboard);
 router.get("/:id", getUserById);
 router.put("/:id/performance", allowRoles("captain"), updateUserPerformance);

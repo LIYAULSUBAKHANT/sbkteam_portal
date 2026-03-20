@@ -35,6 +35,8 @@ async function authenticateToken(req, res, next) {
 
     const user = rows[0];
 
+    console.log("ROLE:", user.role_name);
+
     req.user = {
       id: user.id,
       fullName: user.full_name,

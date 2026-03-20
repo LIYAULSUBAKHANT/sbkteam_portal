@@ -202,9 +202,10 @@ function formatRelativeTime(value) {
 }
 
 function getPermissions(role) {
-  const isCaptain = role === "Captain" || role === "captain"
-  const isLeader = role === "Leader" || role === "leader" || role === "Vice Captain" || role === "vice captain"
-  const isMember = role === "Member" || role === "member"
+  const normalized = String(role || "").trim().toLowerCase()
+  const isCaptain = normalized === "captain"
+  const isLeader = ["vice captain", "vice_captain", "manager", "strategist"].includes(normalized)
+  const isMember = normalized === "member"
 
   return {
     canAddMember: isCaptain,
@@ -213,8 +214,8 @@ function getPermissions(role) {
     canUpdatePerformance: isCaptain,
     canDeleteRecords: isCaptain,
     canManageProjects: isCaptain || isLeader,
-    canAssignTasks: isCaptain || isLeader || !isMember,
-    canAssignSkills: isCaptain || isLeader || !isMember,
+    canAssignTasks: isCaptain || isLeader,
+    canAssignSkills: isCaptain || isLeader,
     canCreateAnnouncement: isCaptain || isLeader,
     canViewAnalytics: isCaptain || isLeader,
     canSyncPoints: isCaptain || isLeader,
@@ -515,10 +516,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       true
     )
 
-    let userRows = [currentUserRow]
-    if (currentUserRow.role_key !== "member") {
-      userRows = await loadWithFallback(() => apiGet("/api/users"), [currentUserRow], "users list")
-    }
+    const userRows = await loadWithFallback(() => apiGet("/api/users"), [currentUserRow], "users list")
 
     const [teamsRows, projectsRows, tasksRows, announcementsRows, remindersRows, notificationsRows, leaderboardRows] = await Promise.all([
       loadWithFallback(() => apiGet("/api/teams"), [], "teams"),
@@ -1583,8 +1581,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       )
     )
 
-    const canSeeAllMembers = ["Captain", "Vice Captain", "Leader"].includes(currentUser?.role) ||
-      ["captain", "vice captain", "leader"].includes(currentUser?.role?.toLowerCase())
+    const canSeeAllMembers = ["captain", "vice captain", "manager", "strategist"].includes(currentUser?.role?.toLowerCase()) || currentUser?.role?.toLowerCase() === "captain"
 
     const visibleMembers = canSeeAllMembers
       ? filteredMembers
@@ -1655,7 +1652,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                       <td className="p-4 text-foreground">{member.tasks}</td>
                       <td className="p-4">
                         <div className="flex flex-wrap gap-2">
-                          {(permissions.canViewDetails && (currentUser?.role === "Captain" || currentUser?.role === "Leader" || currentUser?.role === "leader" || member.id === currentUser?.id)) ? (
+                          {(permissions.canViewDetails && (member.id === currentUser?.id || ["captain", "vice captain", "manager", "strategist"].includes(currentUser?.role?.toLowerCase()))) ? (
                             <Button size="sm" variant="outline" onClick={() => openMemberDetailsModal(member)}>
                               View Details
                             </Button>

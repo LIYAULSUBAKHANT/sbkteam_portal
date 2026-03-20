@@ -4,8 +4,8 @@ const { allowRoles } = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
-router.post("/", allowRoles("captain", "vice_captain", "manager"), assignSkill);
-router.patch("/:id/status", updateSkillStatus);
+router.post("/", allowRoles("captain", "vice_captain", "manager", "strategist"), assignSkill);
+router.patch("/:id/status", allowRoles("captain", "vice_captain", "manager", "strategist"), updateSkillStatus);
 router.get("/user/:userId", getSkillsByUser);
 
 module.exports = router;

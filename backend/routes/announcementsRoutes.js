@@ -4,9 +4,9 @@ const { allowRoles } = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
-router.post("/", allowRoles("captain", "vice_captain"), createAnnouncement);
-router.patch("/:id", allowRoles("captain"), updateAnnouncement);
+router.post("/", allowRoles("captain", "vice_captain", "manager", "strategist"), createAnnouncement);
+router.patch("/:id", allowRoles("captain", "vice_captain", "manager", "strategist"), updateAnnouncement);
 router.get("/", getAnnouncements);
-router.delete("/:id", allowRoles("captain"), deleteAnnouncement);
+router.delete("/:id", allowRoles("captain", "vice_captain", "manager", "strategist"), deleteAnnouncement);
 
 module.exports = router;
