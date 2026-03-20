@@ -153,28 +153,43 @@ export function MemberModal({ open, onOpenChange, member, onSubmit }: MemberModa
             </select>
           </div>
 
-          {/* Skills */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Skills
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {skillOptions.map((skill) => (
-                <button
-                  key={skill}
-                  type="button"
-                  onClick={() => toggleSkill(skill)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    formData.skills.includes(skill)
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  {skill}
-                </button>
-              ))}
+          {/* Skills Overview */}
+          {member && (
+            <div className="pt-2">
+              {/* Primary Skills */}
+              {(member.primary_skill_1 || member.primary_skill_2) && (
+                <div className="mt-6">
+                  <h3 className="text-sm text-gray-400 mb-2">Primary Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {member.primary_skill_1 && <span className="skill-badge">{member.primary_skill_1}</span>}
+                    {member.primary_skill_2 && <span className="skill-badge">{member.primary_skill_2}</span>}
+                  </div>
+                </div>
+              )}
+
+              {/* Secondary Skills */}
+              {(member.secondary_skill_1 || member.secondary_skill_2) && (
+                <div className="mt-4">
+                  <h3 className="text-sm text-gray-400 mb-2">Secondary Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {member.secondary_skill_1 && <span className="skill-badge">{member.secondary_skill_1}</span>}
+                    {member.secondary_skill_2 && <span className="skill-badge">{member.secondary_skill_2}</span>}
+                  </div>
+                </div>
+              )}
+
+              {/* Special Skills */}
+              {(member.special_skill_1 || member.special_skill_2) && (
+                <div className="mt-4">
+                  <h3 className="text-sm text-gray-400 mb-2">Special Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {member.special_skill_1 && <span className="skill-badge">{member.special_skill_1}</span>}
+                    {member.special_skill_2 && <span className="skill-badge">{member.special_skill_2}</span>}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
           {/* Actions */}
           <div className="flex gap-3 pt-4">

@@ -14,6 +14,12 @@ export interface Member {
   avatar: string
   points: number
   joinedAt: string
+  primary_skill_1?: string
+  primary_skill_2?: string
+  secondary_skill_1?: string
+  secondary_skill_2?: string
+  special_skill_1?: string
+  special_skill_2?: string
 }
 
 export interface Team {

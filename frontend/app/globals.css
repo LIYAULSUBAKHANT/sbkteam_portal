@@ -111,3 +111,8 @@
 ::-webkit-scrollbar-thumb:hover {
   background: oklch(0.38 0.01 260);
 }
+
+/* Skill Badge Styling */
+.skill-badge {
+  @apply px-3 py-1 bg-zinc-800 text-sm rounded-full text-gray-200;
+}
