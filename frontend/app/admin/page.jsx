@@ -2751,144 +2751,148 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
             setSelectedMember(null)
           }
         }}>
-          <DialogContent className="max-w-4xl w-full mx-auto border border-border bg-background">
-            <div className="max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
+          <DialogContent className="max-w-2xl w-full mx-auto border border-border bg-background p-0">
+            <div className="max-h-[90vh] overflow-y-auto p-6">
+              <DialogHeader className="mb-6">
                 <DialogTitle>Member Details</DialogTitle>
                 <DialogDescription>Extended profile data for {selectedMember?.name || "this member"}.</DialogDescription>
               </DialogHeader>
-              <div className="space-y-6 pr-2">
-                <div className="rounded-2xl border border-border bg-muted/30 p-5 w-full">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-16 w-16">
-                        <AvatarFallback className="bg-primary/10 text-xl text-primary">
-                          {selectedMember?.avatar || "--"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-2xl font-semibold text-foreground">{selectedMember?.name || "Not set"}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">{selectedMember?.email || "Not set"}</p>
-                      </div>
+              
+              <div className="rounded-2xl border border-border bg-muted/30 p-5 w-full mb-6">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-16 w-16">
+                      <AvatarFallback className="bg-primary/10 text-xl text-primary">
+                        {selectedMember?.avatar || "--"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-2xl font-semibold text-foreground">{selectedMember?.name || "Not set"}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{selectedMember?.email || "Not set"}</p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge className={cn("border", roleColors[selectedMember?.role || "Member"])}>
-                        {selectedMember?.role || "Member"}
-                      </Badge>
-                      <Badge variant="outline">{selectedMember?.team || "Unassigned"}</Badge>
-                      <Badge variant="outline">{selectedMember?.roll_number || "No roll number"}</Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge className={cn("border", roleColors[selectedMember?.role || "Member"])}>
+                      {selectedMember?.role || "Member"}
+                    </Badge>
+                    <Badge variant="outline">{selectedMember?.team || "Unassigned"}</Badge>
+                    <Badge variant="outline">{selectedMember?.roll_number || "No roll number"}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-6">
+                {/* Academic Profile */}
+                <div className="bg-zinc-900 rounded-xl p-5 w-full">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Academic Profile</p>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Department</p>
+                      <p className="mt-1 text-base font-semibold text-foreground">{selectedMember?.department || "Not set"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Position</p>
+                      <p className="mt-1 text-base font-semibold text-foreground">{selectedMember?.position || "Not set"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Special Lab</p>
+                      <p className="mt-1 text-base font-semibold text-foreground">{selectedMember?.special_lab || "Not set"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">CGPA</p>
+                      <p className="mt-1 text-base font-semibold text-foreground">{selectedMember?.cgpa || 0}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-                  <div className="bg-zinc-900 rounded-xl p-5 w-full">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Academic Profile</p>
-                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Department</p>
-                        <p className="mt-1 text-base font-semibold text-foreground">{selectedMember?.department || "Not set"}</p>
+                {/* Performance */}
+                <div className="bg-zinc-900 rounded-xl p-5 w-full">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Performance</p>
+                  <div className="mt-4 flex justify-between gap-4">
+                    <div className="flex-1 text-center">
+                      <p className="text-xs uppercase tracking-wide text-gray-400">Activity</p>
+                      <p className="mt-2 text-xl font-bold text-foreground">{selectedMember?.activity_points || 0}</p>
+                    </div>
+                    <div className="flex-1 text-center">
+                      <p className="text-xs uppercase tracking-wide text-gray-400">Reward</p>
+                      <p className="mt-2 text-xl font-bold text-foreground">{selectedMember?.reward_points || 0}</p>
+                    </div>
+                    <div className="flex-1 text-center">
+                      <p className="text-xs uppercase tracking-wide text-gray-400">Tasks</p>
+                      <p className="mt-2 text-xl font-bold text-foreground">{selectedMember?.tasks || 0}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Skills Overview */}
+                <div className="bg-zinc-900 rounded-xl p-5 w-full">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Skills Overview</p>
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground mb-2">Primary Skills</p>
+                      <div className="flex flex-wrap gap-2">
+                        {getSkillItems(selectedMember?.primary_skill_1, selectedMember?.primary_skill_2).length > 0 ? (
+                          getSkillItems(selectedMember?.primary_skill_1, selectedMember?.primary_skill_2).map((skill) => (
+                            <Badge key={skill} variant="secondary" className="px-3 py-1 text-xs">
+                              {skill}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Not set</span>
+                        )}
                       </div>
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Position</p>
-                        <p className="mt-1 text-base font-semibold text-foreground">{selectedMember?.position || "Not set"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground mb-2">Secondary Skills</p>
+                      <div className="flex flex-wrap gap-2">
+                        {getSkillItems(selectedMember?.secondary_skill_1, selectedMember?.secondary_skill_2).length > 0 ? (
+                          getSkillItems(selectedMember?.secondary_skill_1, selectedMember?.secondary_skill_2).map((skill) => (
+                            <Badge key={skill} variant="secondary" className="px-3 py-1 text-xs">
+                              {skill}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Not set</span>
+                        )}
                       </div>
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Special Lab</p>
-                        <p className="mt-1 text-base font-semibold text-foreground">{selectedMember?.special_lab || "Not set"}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">CGPA</p>
-                        <p className="mt-1 text-base font-semibold text-foreground">{selectedMember?.cgpa || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground mb-2">Special Skills</p>
+                      <div className="flex flex-wrap gap-2">
+                        {getSkillItems(selectedMember?.special_skill_1, selectedMember?.special_skill_2).length > 0 ? (
+                          getSkillItems(selectedMember?.special_skill_1, selectedMember?.special_skill_2).map((skill) => (
+                            <Badge key={skill} variant="secondary" className="px-3 py-1 text-xs">
+                              {skill}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Not set</span>
+                        )}
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  <div className="bg-zinc-900 rounded-xl p-5 w-full">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Performance</p>
-                    <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                      <div className="rounded-lg bg-muted/40 p-4 text-center">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Activity</p>
-                        <p className="mt-2 text-2xl font-bold break-words text-foreground">{selectedMember?.activity_points || 0}</p>
-                      </div>
-                      <div className="rounded-lg bg-muted/40 p-4 text-center">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Reward</p>
-                        <p className="mt-2 text-2xl font-bold break-words text-foreground">{selectedMember?.reward_points || 0}</p>
-                      </div>
-                      <div className="rounded-lg bg-muted/40 p-4 text-center">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Tasks</p>
-                        <p className="mt-2 text-2xl font-bold break-words text-foreground">{selectedMember?.tasks || 0}</p>
-                      </div>
+                {/* Links */}
+                <div className="bg-zinc-900 rounded-xl p-5 w-full">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Links</p>
+                  <div className="mt-4 space-y-3">
+                    <div className="rounded-lg bg-muted/40 p-4">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">LinkedIn</p>
+                      <p className="mt-2 text-sm font-medium text-foreground truncate">{selectedMember?.linkedin || "Not set"}</p>
                     </div>
-                  </div>
-
-                  <div className="bg-zinc-900 rounded-xl p-5 w-full">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Skills Overview</p>
-                    <div className="mt-4 space-y-4">
-                      <div>
-                        <p className="text-sm font-semibold text-foreground mb-2">Primary</p>
-                        <div className="flex flex-wrap gap-2">
-                          {getSkillItems(selectedMember?.primary_skill_1, selectedMember?.primary_skill_2).length > 0 ? (
-                            getSkillItems(selectedMember?.primary_skill_1, selectedMember?.primary_skill_2).map((skill) => (
-                              <Badge key={skill} variant="secondary" className="px-3 py-1 text-xs">
-                                {skill}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-sm text-muted-foreground">Not set</span>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-foreground mb-2">Secondary</p>
-                        <div className="flex flex-wrap gap-2">
-                          {getSkillItems(selectedMember?.secondary_skill_1, selectedMember?.secondary_skill_2).length > 0 ? (
-                            getSkillItems(selectedMember?.secondary_skill_1, selectedMember?.secondary_skill_2).map((skill) => (
-                              <Badge key={skill} variant="secondary" className="px-3 py-1 text-xs">
-                                {skill}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-sm text-muted-foreground">Not set</span>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-foreground mb-2">Special</p>
-                        <div className="flex flex-wrap gap-2">
-                          {getSkillItems(selectedMember?.special_skill_1, selectedMember?.special_skill_2).length > 0 ? (
-                            getSkillItems(selectedMember?.special_skill_1, selectedMember?.special_skill_2).map((skill) => (
-                              <Badge key={skill} variant="secondary" className="px-3 py-1 text-xs">
-                                {skill}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-sm text-muted-foreground">Not set</span>
-                          )}
-                        </div>
-                      </div>
+                    <div className="rounded-lg bg-muted/40 p-4">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">GitHub</p>
+                      <p className="mt-2 text-sm font-medium text-foreground truncate">{selectedMember?.github || "Not set"}</p>
                     </div>
-                  </div>
-
-                  <div className="bg-zinc-900 rounded-xl p-5 w-full">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Links</p>
-                    <div className="mt-4 space-y-3">
-                      <div className="rounded-lg bg-muted/40 p-4">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">LinkedIn</p>
-                        <p className="mt-2 text-sm font-medium text-foreground truncate">{selectedMember?.linkedin || "Not set"}</p>
-                      </div>
-                      <div className="rounded-lg bg-muted/40 p-4">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">GitHub</p>
-                        <p className="mt-2 text-sm font-medium text-foreground truncate">{selectedMember?.github || "Not set"}</p>
-                      </div>
-                      <div className="rounded-lg bg-muted/40 p-4">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">LeetCode</p>
-                        <p className="mt-2 text-sm font-medium text-foreground truncate">{selectedMember?.leetcode || "Not set"}</p>
-                      </div>
+                    <div className="rounded-lg bg-muted/40 p-4">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">LeetCode</p>
+                      <p className="mt-2 text-sm font-medium text-foreground truncate">{selectedMember?.leetcode || "Not set"}</p>
                     </div>
                   </div>
                 </div>
               </div>
+
               <DialogFooter className="mt-6">
                 <Button variant="outline" onClick={() => setMemberDetailsOpen(false)}>Close</Button>
               </DialogFooter>
