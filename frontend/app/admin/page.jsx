@@ -460,6 +460,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     name: "",
     description: "",
     lead_user_id: "",
+    member_ids: [],
   })
   const [taskForm, setTaskForm] = useState({
     title: "",
@@ -712,7 +713,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   }
 
   function resetTeamForm() {
-    setTeamForm({ name: "", description: "", lead_user_id: "" })
+    setTeamForm({ name: "", description: "", lead_user_id: "", member_ids: [] })
     setEditingTeamId(null)
   }
 
@@ -948,26 +949,30 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     setActionMessage("")
 
     try {
-      await apiPost("/api/teams", {
+      const result = await apiPost("/api/teams", {
         name: teamForm.name,
         description: teamForm.description,
         lead_user_id: teamForm.lead_user_id ? Number(teamForm.lead_user_id) : null,
       })
-      await refreshData()
-      setTeamModalOpen(false)
-      resetTeamForm()
-      setActionMessage("Team created successfully.")
+
+      return result.teamId
     } catch (error) {
       setActionError(error.message || "Failed to create team.")
+      throw error
     }
   }
 
   function openTeamEditModal(team) {
     setEditingTeamId(team.id)
+    const assignedMemberIds = members
+      .filter((member) => member.teamId === team.id)
+      .map((member) => member.id)
+
     setTeamForm({
       name: team.name,
       description: team.description === "No description provided." ? "" : team.description,
       lead_user_id: team.leadUserId || "",
+      member_ids: assignedMemberIds,
     })
     setTeamModalOpen(true)
   }
@@ -983,6 +988,13 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           description: teamForm.description,
           lead_user_id: teamForm.lead_user_id ? Number(teamForm.lead_user_id) : null,
         })
+
+        if (teamForm.member_ids && teamForm.member_ids.length > 0) {
+          await apiPut(`/api/teams/${editingTeamId}/add-members`, {
+            memberIds: teamForm.member_ids
+          })
+        }
+
         await refreshData()
         setTeamModalOpen(false)
         resetTeamForm()
@@ -991,7 +1003,19 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
         return
       }
 
-      await handleCreateTeam()
+      const createdTeamId = await handleCreateTeam()
+
+      if (createdTeamId && teamForm.member_ids && teamForm.member_ids.length > 0) {
+        await apiPut(`/api/teams/${createdTeamId}/add-members`, {
+          memberIds: teamForm.member_ids
+        })
+      }
+
+      await refreshData()
+      setTeamModalOpen(false)
+      resetTeamForm()
+      toast({ title: "Team created", description: "Team created successfully." })
+      setActionMessage("Team created successfully.")
     } catch (error) {
       setActionError(error.message || "Failed to save team.")
     }
@@ -2941,6 +2965,41 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                     {members.map((member) => <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Assign Members</Label>
+                <div className="max-h-44 overflow-y-auto rounded border border-border bg-muted p-2">
+                  {members
+                    .filter((member) => !member.teamId || member.teamId === String(editingTeamId))
+                    .map((member) => {
+                      const isChecked = teamForm.member_ids.includes(member.id)
+
+                      return (
+                        <label key={member.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-muted/70">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(event) => {
+                              if (event.target.checked) {
+                                setTeamForm((prev) => ({
+                                  ...prev,
+                                  member_ids: [...new Set([...prev.member_ids, member.id])]
+                                }))
+                              } else {
+                                setTeamForm((prev) => ({
+                                  ...prev,
+                                  member_ids: prev.member_ids.filter((id) => id !== member.id)
+                                }))
+                              }
+                            }}
+                          />
+                          <span className="text-sm">{member.name} ({member.email})</span>
+                        </label>
+                      )
+                    })}
+                </div>
+                <p className="text-xs text-muted-foreground">Only unassigned members are shown for assignment.</p>
               </div>
             </div>
             <DialogFooter>

@@ -126,6 +126,57 @@ async function getAllTeams(req, res) {
   }
 }
 
+async function addMembersToTeam(req, res) {
+  try {
+    const { teamId } = req.params;
+    const { memberIds } = req.body;
+
+    if (!Array.isArray(memberIds) || memberIds.length === 0) {
+      return res.status(400).json({ message: "memberIds must be a non-empty array." });
+    }
+
+    const normalizedMemberIds = memberIds
+      .map((id) => Number(id))
+      .filter((id) => Number.isInteger(id) && id > 0);
+
+    if (normalizedMemberIds.length === 0) {
+      return res.status(400).json({ message: "memberIds must contain valid numeric ids." });
+    }
+
+    const [teamRows] = await db.execute("SELECT id, name FROM teams WHERE id = ?", [teamId]);
+    if (teamRows.length === 0) {
+      return res.status(404).json({ message: "Team not found." });
+    }
+
+    const placeholders = normalizedMemberIds.map(() => "?").join(",");
+    const [existingUsers] = await db.execute(
+      `SELECT id FROM users WHERE id IN (${placeholders})`,
+      normalizedMemberIds
+    );
+
+    if (existingUsers.length !== normalizedMemberIds.length) {
+      return res.status(400).json({ message: "One or more memberIds are invalid." });
+    }
+
+    await db.execute(
+      `UPDATE users SET team_id = ? WHERE id IN (${placeholders})`,
+      [teamId, ...normalizedMemberIds]
+    );
+
+    await logActivity({
+      userId: req.user.id,
+      action: "added members to team",
+      targetType: "team",
+      targetId: Number(teamId),
+      targetLabel: teamRows[0].name
+    });
+
+    return res.status(200).json({ message: "Members assigned to team successfully." });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to assign members to team.", error: error.message });
+  }
+}
+
 async function deleteTeam(req, res) {
   let connection;
 
