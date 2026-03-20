@@ -237,4 +237,4 @@ async function deleteTeam(req, res) {
   }
 }
 
-module.exports = { createTeam, assignLead, updateTeam, getAllTeams, deleteTeam };
+module.exports = { createTeam, assignLead, updateTeam, getAllTeams, deleteTeam, addMembersToTeam };
