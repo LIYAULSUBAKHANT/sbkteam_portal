@@ -40,11 +40,23 @@ console.log("[DB] Connection config:", {
 
 const pool = mysql.createPool(dbConfig);
 
+pool.on("connection", (connection) => {
+  connection.query("SET time_zone = '+05:30'", (error) => {
+    if (error) {
+      console.error("[DB] Failed to set session timezone:", error.message);
+      return;
+    }
+
+    console.log("[DB] Session timezone set to +05:30");
+  });
+});
+
 (async () => {
   let connection;
 
   try {
     connection = await pool.getConnection();
+    await connection.query("SET time_zone = '+05:30'");
     console.log("[DB] MySQL connection established successfully.");
   } catch (error) {
     console.error("[DB] MySQL connection failed:", {

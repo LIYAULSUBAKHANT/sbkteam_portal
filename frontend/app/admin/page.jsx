@@ -193,29 +193,24 @@ function formatDateTime(value) {
   return date.toLocaleString()
 }
 
-function parseRelativeTimeValue(value) {
-  if (!value) return null
-
-  if (typeof value === "string") {
-    const normalized = value.trim().replace(" ", "T")
-    const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(normalized)
-    return dayjs(hasTimezone ? normalized : `${normalized}+05:30`)
+function formatRelativeTime(value) {
+  const date = new Date(value)
+  if (!Number.isNaN(date.getTime())) {
+    const parsed = dayjs(date)
+    if (parsed.isValid()) {
+      return parsed.fromNow()
+    }
   }
 
-  return dayjs(value)
-}
-
-function formatRelativeTime(value) {
-  const parsed = parseRelativeTimeValue(value)
-  if (parsed?.isValid?.()) {
+  const parsed = dayjs(value)
+  if (parsed.isValid()) {
     return parsed.fromNow()
   }
 
   const now = new Date()
-  const timestamp = new Date(value)
-  const diff = (now - timestamp) / 1000
+  const diff = (now - date) / 1000
 
-  if (!value || Number.isNaN(timestamp.getTime()) || diff < 60) return "just now"
+  if (!value || Number.isNaN(date.getTime()) || diff < 60) return "just now"
   if (diff < 3600) return `${Math.floor(diff / 60)} min ago`
   if (diff < 86400) return `${Math.floor(diff / 3600)} hrs ago`
   return `${Math.floor(diff / 86400)} days ago`

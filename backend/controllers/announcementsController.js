@@ -1,5 +1,6 @@
 const db = require("../db");
 const { logActivity } = require("./activityLogController");
+const { logInsertedTime, serializeRows } = require("../utils/datetime");
 
 async function getNotificationRecipients(targetType, targetTeamId, targetUserId) {
   if (targetType === "team" && targetTeamId) {
@@ -61,8 +62,9 @@ async function createAnnouncement(req, res) {
         message,
         target_type,
         target_team_id,
-        target_user_id
-      ) VALUES (?, ?, ?, ?, ?, ?)`,
+        target_user_id,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
       [
         req.user.id,
         title,
@@ -72,6 +74,8 @@ async function createAnnouncement(req, res) {
         target_user_id || null
       ]
     );
+
+    logInsertedTime("Announcement inserted");
 
     await createNotificationsForAnnouncement(
       title,
@@ -190,7 +194,7 @@ async function getAnnouncements(req, res) {
       isLeader ? [] : [req.user.teamId || 0, req.user.id]
     );
 
-    return res.status(200).json(rows);
+    return res.status(200).json(serializeRows(rows));
   } catch (error) {
     return res.status(500).json({ message: "Failed to fetch announcements.", error: error.message });
   }

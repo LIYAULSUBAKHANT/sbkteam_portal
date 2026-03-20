@@ -1,5 +1,6 @@
 const db = require("../db");
 const { logActivity } = require("./activityLogController");
+const { logInsertedTime, serializeRows } = require("../utils/datetime");
 
 async function createNotification(req, res) {
   try {
@@ -14,6 +15,8 @@ async function createNotification(req, res) {
        VALUES (?, ?, ?, NOW())`,
       [user_id, type, message]
     );
+
+    logInsertedTime("Notification inserted");
 
     await logActivity({
       userId: req.user.id,
@@ -42,7 +45,7 @@ async function getNotifications(req, res) {
       [req.user.id]
     );
 
-    return res.status(200).json(rows);
+    return res.status(200).json(serializeRows(rows));
   } catch (error) {
     return res.status(500).json({ message: "Failed to fetch notifications.", error: error.message });
   }
