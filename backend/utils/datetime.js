@@ -7,6 +7,12 @@ function serializeTimestamp(value) {
     return value;
   }
 
+  if (typeof value === "string") {
+    const normalized = value.trim().replace(" ", "T");
+    const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(normalized);
+    return hasTimezone ? normalized : `${normalized}+05:30`;
+  }
+
   const date = value instanceof Date ? value : new Date(value);
 
   if (Number.isNaN(date.getTime())) {

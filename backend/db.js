@@ -23,6 +23,7 @@ const dbConfig = {
   password: process.env.DB_PASSWORD ?? "",
   database: process.env.DB_NAME,
   timezone: '+05:30',
+  dateStrings: true,
   ssl: false,
   waitForConnections: true,
   connectionLimit: 10,
