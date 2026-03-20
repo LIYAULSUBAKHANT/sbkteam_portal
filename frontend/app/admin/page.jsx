@@ -202,16 +202,22 @@ function formatRelativeTime(value) {
 }
 
 function getPermissions(role) {
+  const isCaptain = role === "Captain" || role === "captain"
+  const isLeader = role === "Leader" || role === "leader" || role === "Vice Captain" || role === "vice captain"
+  const isMember = role === "Member" || role === "member"
+
   return {
-    canAddMember: role === "Captain",
-    canEditMember: role === "Captain",
-    canManageProjects: role === "Captain" || role === "Vice Captain",
-    canAssignTasks: role === "Captain" || role === "Vice Captain" || role === "Manager",
-    canAssignSkills: role === "Captain" || role === "Vice Captain" || role === "Manager",
-    canCreateAnnouncement: role === "Captain" || role === "Vice Captain",
-    canViewAnalytics: role !== "Member",
-    canSyncPoints: role === "Captain" || role === "Vice Captain",
-    canDeleteRecords: role === "Captain",
+    canAddMember: isCaptain,
+    canEditMember: isCaptain,
+    canViewDetails: isCaptain || isLeader || isMember,
+    canUpdatePerformance: isCaptain,
+    canDeleteRecords: isCaptain,
+    canManageProjects: isCaptain || isLeader,
+    canAssignTasks: isCaptain || isLeader || !isMember,
+    canAssignSkills: isCaptain || isLeader || !isMember,
+    canCreateAnnouncement: isCaptain || isLeader,
+    canViewAnalytics: isCaptain || isLeader,
+    canSyncPoints: isCaptain || isLeader,
   }
 }
 
@@ -1642,7 +1648,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                       <td className="p-4 text-foreground">{member.tasks}</td>
                       <td className="p-4">
                         <div className="flex flex-wrap gap-2">
-                          {permissions.canEditMember ? (
+                          {(permissions.canViewDetails && (currentUser?.role === "Captain" || currentUser?.role === "Leader" || currentUser?.role === "leader" || member.id === currentUser?.id)) ? (
                             <Button size="sm" variant="outline" onClick={() => openMemberDetailsModal(member)}>
                               View Details
                             </Button>
@@ -1652,7 +1658,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                               Edit
                             </Button>
                           ) : null}
-                          {permissions.canEditMember ? (
+                          {permissions.canUpdatePerformance ? (
                             <Button size="sm" variant="outline" onClick={() => openPerformanceModal(member)}>
                               Update Performance
                             </Button>
