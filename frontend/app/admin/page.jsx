@@ -1583,6 +1583,13 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       )
     )
 
+    const canSeeAllMembers = ["Captain", "Vice Captain", "Leader"].includes(currentUser?.role) ||
+      ["captain", "vice captain", "leader"].includes(currentUser?.role?.toLowerCase())
+
+    const visibleMembers = canSeeAllMembers
+      ? filteredMembers
+      : filteredMembers.filter((member) => member.id === currentUser?.id)
+
     return (
       <div className="space-y-6">
         {renderBanner(actionMessage, "success")}
@@ -1620,7 +1627,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filteredMembers.map((member) => {
+                {visibleMembers.map((member) => {
                   const RoleIcon = roleIcons[member.role] || Circle
 
                   return (
