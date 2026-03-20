@@ -41,7 +41,7 @@ async function getNotifications(req, res) {
       `SELECT id, user_id, type, message, is_read, created_at
        FROM notifications
        WHERE user_id = ?
-       ORDER BY created_at DESC`,
+       ORDER BY created_at DESC, id DESC`,
       [req.user.id]
     );
 

@@ -167,7 +167,7 @@ async function getAnnouncements(req, res) {
         INNER JOIN users au ON au.id = a.author_user_id
         LEFT JOIN teams t ON t.id = a.target_team_id
         LEFT JOIN users tu ON tu.id = a.target_user_id
-        ORDER BY a.created_at DESC`
+        ORDER BY a.created_at DESC, a.id DESC`
       : `SELECT
           a.id,
           a.title,
@@ -187,7 +187,7 @@ async function getAnnouncements(req, res) {
         WHERE a.target_type = 'all'
            OR (a.target_type = 'team' AND a.target_team_id = ?)
            OR (a.target_type = 'user' AND a.target_user_id = ?)
-        ORDER BY a.created_at DESC`;
+        ORDER BY a.created_at DESC, a.id DESC`;
 
     const [rows] = await db.execute(
       query,

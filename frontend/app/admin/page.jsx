@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import dayjs from "dayjs"
-import relativeTime from "dayjs/plugin/relativeTime"
 import {
   AlertCircle,
   BarChart3,
@@ -71,8 +69,6 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost, apiPut, clearStoredAuth, getStoredAuth } from "@/lib/api"
 import { cn } from "@/lib/utils"
-
-dayjs.extend(relativeTime)
 
 const menuItems = [
   { name: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
@@ -195,25 +191,45 @@ function formatDateTime(value) {
 
 function formatRelativeTime(value) {
   const date = new Date(value)
-  if (!Number.isNaN(date.getTime())) {
-    const parsed = dayjs(date)
-    if (parsed.isValid()) {
-      return parsed.fromNow()
-    }
-  }
-
-  const parsed = dayjs(value)
-  if (parsed.isValid()) {
-    return parsed.fromNow()
+  if (Number.isNaN(date.getTime())) {
+    return "just now"
   }
 
   const now = new Date()
   const diff = (now - date) / 1000
+  const seconds = Math.max(0, Math.floor(diff))
 
-  if (!value || Number.isNaN(date.getTime()) || diff < 60) return "just now"
-  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)} hrs ago`
-  return `${Math.floor(diff / 86400)} days ago`
+  if (!value || seconds < 60) return "just now"
+
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) {
+    return `${minutes} ${minutes === 1 ? "min" : "mins"} ago`
+  }
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) {
+    return `${hours} ${hours === 1 ? "hr" : "hrs"} ago`
+  }
+
+  const days = Math.floor(hours / 24)
+  return `${days} ${days === 1 ? "day" : "days"} ago`
+}
+
+function sortByCreatedAtDesc(items) {
+  return [...items].sort((left, right) => {
+    const leftTime = new Date(left.created_at).getTime()
+    const rightTime = new Date(right.created_at).getTime()
+
+    if (Number.isNaN(leftTime) || Number.isNaN(rightTime)) {
+      return 0
+    }
+
+    if (rightTime !== leftTime) {
+      return rightTime - leftTime
+    }
+
+    return Number(right.id || 0) - Number(left.id || 0)
+  })
 }
 
 function getPermissions(role) {
@@ -579,9 +595,9 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     setProjects(projectsRows.map(normalizeProject))
     setTasks(tasksRows.map(normalizeTask))
     setSkills(skillRows.map(normalizeSkill))
-    setAnnouncements(announcementsRows.map(normalizeAnnouncement))
+    setAnnouncements(sortByCreatedAtDesc(announcementsRows).map(normalizeAnnouncement))
     setReminders(remindersRows.map(normalizeReminder))
-    setNotifications(notificationsRows.map(normalizeNotification))
+    setNotifications(sortByCreatedAtDesc(notificationsRows).map(normalizeNotification))
     setLeaderboard(leaderboardRows.map(normalizeLeaderboardUser))
   }
 
