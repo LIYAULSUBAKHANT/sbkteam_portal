@@ -194,9 +194,18 @@ import relativeTime from 'dayjs/plugin/relativeTime'
 dayjs.extend(relativeTime)
 
 function formatRelativeTime(value) {
-  if (!value) return "Just now"
-  const date = dayjs(value).add(5.5, 'hour') // IST offset fallback
-  return date.fromNow()
+  try {
+    if (!value) return "Just now";
+    return dayjs(value).add(5.5, 'hour').fromNow();
+  } catch {
+    // Fallback per spec: "just now", minutes, hours, days
+    const now = new Date();
+    const diff = (now - new Date(value)) / 1000;
+    if (diff < 60) return "just now";
+    if (diff < 3600) return Math.floor(diff / 60) + " min ago";
+    if (diff < 86400) return Math.floor(diff / 3600) + " hrs ago";
+    return Math.floor(diff / 86400) + " days ago";
+  }
 }
 
 function getPermissions(role) {
