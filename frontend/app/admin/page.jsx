@@ -308,7 +308,11 @@ function normalizeProject(project) {
     description: project.description || "",
     status: project.status,
     progress: Number(project.progress || 0),
+    totalTasks: Number(project.total_tasks || 0),
+    completedTasks: Number(project.completed_tasks || 0),
     deadline: project.deadline,
+    createdAt: project.created_at,
+    updatedAt: project.updated_at,
     teamId: String(project.team_id),
     team: project.team_name || "Unassigned",
   }

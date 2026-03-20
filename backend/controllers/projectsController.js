@@ -10,15 +10,15 @@ async function createProject(req, res) {
     }
 
     const [result] = await db.execute(
-      `INSERT INTO projects (team_id, created_by_user_id, name, description, status, progress, deadline)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO projects (team_id, created_by_user_id, name, description, status, progress, deadline, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [
         team_id,
         req.user.id,
         name,
         description || null,
         status || "Planning",
-        typeof progress === "number" ? progress : 0,
+        0,
         deadline || null
       ]
     );
@@ -48,17 +48,21 @@ async function getAllProjects(req, res) {
         p.name,
         p.description,
         p.status,
-        p.progress,
+        COALESCE(ROUND(SUM(CASE WHEN t.status = 'Done' THEN 1 ELSE 0 END) / NULLIF(COUNT(t.id), 0) * 100), 0) AS progress,
+        COUNT(t.id) AS total_tasks,
+        SUM(CASE WHEN t.status = 'Done' THEN 1 ELSE 0 END) AS completed_tasks,
         p.deadline,
         p.created_at,
         p.updated_at,
         p.team_id,
-        t.name AS team_name,
+        tm.name AS team_name,
         p.created_by_user_id,
         u.full_name AS created_by_name
       FROM projects p
-      INNER JOIN teams t ON t.id = p.team_id
+      LEFT JOIN tasks t ON t.project_id = p.id
+      INNER JOIN teams tm ON tm.id = p.team_id
       LEFT JOIN users u ON u.id = p.created_by_user_id
+      GROUP BY p.id, p.name, p.description, p.status, p.deadline, p.created_at, p.updated_at, p.team_id, tm.name, p.created_by_user_id, u.full_name
       ORDER BY p.id ASC`
     );
 
@@ -78,15 +82,19 @@ async function getProjectsByTeam(req, res) {
         p.name,
         p.description,
         p.status,
-        p.progress,
+        COALESCE(ROUND(SUM(CASE WHEN t.status = 'Done' THEN 1 ELSE 0 END) / NULLIF(COUNT(t.id), 0) * 100), 0) AS progress,
+        COUNT(t.id) AS total_tasks,
+        SUM(CASE WHEN t.status = 'Done' THEN 1 ELSE 0 END) AS completed_tasks,
         p.deadline,
         p.created_at,
         p.updated_at,
         p.team_id,
-        t.name AS team_name
+        tm.name AS team_name
       FROM projects p
-      INNER JOIN teams t ON t.id = p.team_id
+      LEFT JOIN tasks t ON t.project_id = p.id
+      INNER JOIN teams tm ON tm.id = p.team_id
       WHERE p.team_id = ?
+      GROUP BY p.id, p.name, p.description, p.status, p.deadline, p.created_at, p.updated_at, p.team_id, tm.name
       ORDER BY p.id ASC`,
       [teamId]
     );
@@ -118,7 +126,8 @@ async function updateProject(req, res) {
            description = COALESCE(?, description),
            status = COALESCE(?, status),
            progress = COALESCE(?, progress),
-           deadline = COALESCE(?, deadline)
+           deadline = COALESCE(?, deadline),
+           updated_at = NOW()
        WHERE id = ?`,
       [
         team_id || null,
