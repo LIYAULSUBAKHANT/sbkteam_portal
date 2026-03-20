@@ -114,6 +114,26 @@ const roleOptions = [
   { label: "Member", value: 5 },
 ]
 
+const emptyMemberForm = {
+  full_name: "",
+  email: "",
+  role_id: "5",
+  team_id: "",
+  password: "1234",
+  roll_number: "",
+  department: "",
+  position: "",
+  special_lab: "",
+  primary_skill: "",
+  secondary_skill: "",
+  special_skill: "",
+  linkedin: "",
+  github: "",
+  leetcode: "",
+  activity_points: "0",
+  reward_points: "0",
+}
+
 function formatDate(value) {
   if (!value) return "Not set"
   const date = new Date(value)
@@ -143,6 +163,7 @@ function formatRelativeTime(value) {
 function getPermissions(role) {
   return {
     canAddMember: role === "Captain",
+    canEditMember: role === "Captain",
     canManageProjects: role === "Captain" || role === "Vice Captain",
     canAssignTasks: role === "Captain" || role === "Vice Captain" || role === "Manager",
     canAssignSkills: role === "Captain" || role === "Vice Captain" || role === "Manager",
@@ -187,6 +208,18 @@ function normalizeUser(user, taskCount = 0) {
     avatar:
       user.avatar_initials || getInitials(user.full_name),
     joinedAt: user.joined_at,
+    teamId: user.team_id ? String(user.team_id) : "",
+    roleId: String(user.role_id),
+    roll_number: user.roll_number || "",
+    department: user.department || "",
+    position: user.position || "",
+    special_lab: user.special_lab || "",
+    primary_skill: user.primary_skill || "",
+    secondary_skill: user.secondary_skill || "",
+    special_skill: user.special_skill || "",
+    linkedin: user.linkedin || "",
+    github: user.github || "",
+    leetcode: user.leetcode || "",
   }
 }
 
@@ -343,13 +376,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   const [editingTaskId, setEditingTaskId] = useState(null)
   const [editingAnnouncementId, setEditingAnnouncementId] = useState(null)
   const [editingReminderId, setEditingReminderId] = useState(null)
-  const [memberForm, setMemberForm] = useState({
-    full_name: "",
-    email: "",
-    role_id: "5",
-    team_id: "",
-    password: "1234",
-  })
+  const [memberForm, setMemberForm] = useState(emptyMemberForm)
   const [performanceForm, setPerformanceForm] = useState({
     id: "",
     name: "",
@@ -604,7 +631,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   }
 
   function resetMemberForm() {
-    setMemberForm({ full_name: "", email: "", role_id: "5", team_id: "", password: "1234" })
+    setMemberForm(emptyMemberForm)
     setEditingMemberId(null)
   }
 
@@ -664,6 +691,18 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
         role_id: Number(memberForm.role_id),
         team_id: memberForm.team_id ? Number(memberForm.team_id) : null,
         password: memberForm.password,
+        roll_number: memberForm.roll_number,
+        department: memberForm.department,
+        position: memberForm.position,
+        special_lab: memberForm.special_lab,
+        primary_skill: memberForm.primary_skill,
+        secondary_skill: memberForm.secondary_skill,
+        special_skill: memberForm.special_skill,
+        linkedin: memberForm.linkedin,
+        github: memberForm.github,
+        leetcode: memberForm.leetcode,
+        activity_points: Number(memberForm.activity_points || 0),
+        reward_points: Number(memberForm.reward_points || 0),
       })
       await refreshData()
       setMemberModalOpen(false)
@@ -679,9 +718,21 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     setMemberForm({
       full_name: member.name,
       email: member.email,
-      role_id: String(roleOptions.find((role) => role.label === member.role)?.value || 5),
-      team_id: teams.find((team) => team.name === member.team)?.id || "",
+      role_id: member.roleId || String(roleOptions.find((role) => role.label === member.role)?.value || 5),
+      team_id: member.teamId || teams.find((team) => team.name === member.team)?.id || "",
       password: "1234",
+      roll_number: member.roll_number || "",
+      department: member.department || "",
+      position: member.position || "",
+      special_lab: member.special_lab || "",
+      primary_skill: member.primary_skill || "",
+      secondary_skill: member.secondary_skill || "",
+      special_skill: member.special_skill || "",
+      linkedin: member.linkedin || "",
+      github: member.github || "",
+      leetcode: member.leetcode || "",
+      activity_points: String(member.activity_points ?? 0),
+      reward_points: String(member.reward_points ?? 0),
     })
     setMemberModalOpen(true)
   }
@@ -697,6 +748,18 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           email: memberForm.email,
           role_id: Number(memberForm.role_id),
           team_id: memberForm.team_id ? Number(memberForm.team_id) : null,
+          roll_number: memberForm.roll_number,
+          department: memberForm.department,
+          position: memberForm.position,
+          special_lab: memberForm.special_lab,
+          primary_skill: memberForm.primary_skill,
+          secondary_skill: memberForm.secondary_skill,
+          special_skill: memberForm.special_skill,
+          linkedin: memberForm.linkedin,
+          github: memberForm.github,
+          leetcode: memberForm.leetcode,
+          activity_points: Number(memberForm.activity_points || 0),
+          reward_points: Number(memberForm.reward_points || 0),
         })
         await refreshData()
         setMemberModalOpen(false)
@@ -1272,12 +1335,61 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   <span className="font-medium text-foreground">{stats.activeProjects}</span>
                 </div>
               </div>
-              <Button variant="outline" className="w-full" onClick={() => openPerformanceModal(currentUser)}>
-                Update Performance
-              </Button>
+              {permissions.canEditMember ? (
+                <Button variant="outline" className="w-full" onClick={() => openPerformanceModal(currentUser)}>
+                  Update Performance
+                </Button>
+              ) : null}
             </CardContent>
           </Card>
         </div>
+
+        <Card className="border border-border shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-semibold text-foreground">Profile Snapshot</CardTitle>
+            <CardDescription>Live profile details from the users table</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-lg bg-muted/50 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Name</p>
+                <p className="mt-1 font-medium text-foreground">{currentUser?.name || "Not set"}</p>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Roll No</p>
+                <p className="mt-1 font-medium text-foreground">{currentUser?.roll_number || "Not set"}</p>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Department</p>
+                <p className="mt-1 font-medium text-foreground">{currentUser?.department || "Not set"}</p>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Position</p>
+                <p className="mt-1 font-medium text-foreground">{currentUser?.position || "Not set"}</p>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Primary Skill</p>
+                <p className="mt-1 font-medium text-foreground">{currentUser?.primary_skill || "Not set"}</p>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Reward Points</p>
+                <p className="mt-1 font-medium text-foreground">{currentUser?.reward_points || 0}</p>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">GitHub</p>
+                <p className="mt-1 font-medium text-foreground break-all">{currentUser?.github || "Not set"}</p>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">LinkedIn</p>
+                <p className="mt-1 font-medium text-foreground break-all">{currentUser?.linkedin || "Not set"}</p>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">LeetCode</p>
+                <p className="mt-1 font-medium text-foreground break-all">{currentUser?.leetcode || "Not set"}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="border border-border shadow-sm">
@@ -1381,7 +1493,17 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
 
   function renderMembers() {
     const filteredMembers = members.filter((member) =>
-      [member.name, member.email, member.role, member.team].some((value) =>
+      [
+        member.name,
+        member.email,
+        member.role,
+        member.team,
+        member.roll_number,
+        member.department,
+        member.position,
+        member.primary_skill,
+        member.github,
+      ].some((value) =>
         value.toLowerCase().includes(searchQuery.toLowerCase())
       )
     )
@@ -1414,8 +1536,13 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
               <thead className="bg-muted/50">
                 <tr>
                   <th className="p-4 text-left font-medium text-muted-foreground">Member</th>
+                  <th className="p-4 text-left font-medium text-muted-foreground">Roll No</th>
+                  <th className="p-4 text-left font-medium text-muted-foreground">Department</th>
+                  <th className="p-4 text-left font-medium text-muted-foreground">Position</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Role</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Team</th>
+                  <th className="p-4 text-left font-medium text-muted-foreground">Primary Skill</th>
+                  <th className="p-4 text-left font-medium text-muted-foreground">GitHub</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Activity Points</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Reward Points</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">CGPA</th>
@@ -1440,6 +1567,9 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                           </div>
                         </div>
                       </td>
+                      <td className="p-4 text-foreground">{member.roll_number || "-"}</td>
+                      <td className="p-4 text-foreground">{member.department || "-"}</td>
+                      <td className="p-4 text-foreground">{member.position || "-"}</td>
                       <td className="p-4">
                         <Badge className={cn("border", roleColors[member.role])}>
                           <RoleIcon className="mr-1 h-3 w-3" />
@@ -1447,20 +1577,35 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                         </Badge>
                       </td>
                       <td className="p-4 text-foreground">{member.team}</td>
+                      <td className="p-4 text-foreground">{member.primary_skill || "-"}</td>
+                      <td className="p-4 text-foreground">
+                        {member.github ? (
+                          <a
+                            href={member.github}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary underline-offset-4 hover:underline"
+                          >
+                            Profile
+                          </a>
+                        ) : "-"}
+                      </td>
                       <td className="p-4 text-foreground">{member.activity_points}</td>
                       <td className="p-4 text-foreground">{member.reward_points}</td>
                       <td className="p-4 text-foreground">{member.cgpa}</td>
                       <td className="p-4 text-foreground">{member.tasks}</td>
                       <td className="p-4">
                         <div className="flex flex-wrap gap-2">
-                          {permissions.canDeleteRecords ? (
+                          {permissions.canEditMember ? (
                             <Button size="sm" variant="secondary" onClick={() => openMemberEditModal(member)}>
                               Edit
                             </Button>
                           ) : null}
-                          <Button size="sm" variant="outline" onClick={() => openPerformanceModal(member)}>
-                            Update Performance
-                          </Button>
+                          {permissions.canEditMember ? (
+                            <Button size="sm" variant="outline" onClick={() => openPerformanceModal(member)}>
+                              Update Performance
+                            </Button>
+                          ) : null}
                           {permissions.canDeleteRecords ? (
                             <Button
                               size="sm"
@@ -2119,6 +2264,46 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">CGPA</p>
                   <p className="mt-1 font-medium text-foreground">{currentUser?.cgpa || 0}</p>
                 </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Roll Number</p>
+                  <p className="mt-1 font-medium text-foreground">{currentUser?.roll_number || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Department</p>
+                  <p className="mt-1 font-medium text-foreground">{currentUser?.department || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Position</p>
+                  <p className="mt-1 font-medium text-foreground">{currentUser?.position || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Special Lab</p>
+                  <p className="mt-1 font-medium text-foreground">{currentUser?.special_lab || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Primary Skill</p>
+                  <p className="mt-1 font-medium text-foreground">{currentUser?.primary_skill || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Secondary Skill</p>
+                  <p className="mt-1 font-medium text-foreground">{currentUser?.secondary_skill || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Special Skill</p>
+                  <p className="mt-1 font-medium text-foreground">{currentUser?.special_skill || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">LinkedIn</p>
+                  <p className="mt-1 font-medium text-foreground break-all">{currentUser?.linkedin || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">GitHub</p>
+                  <p className="mt-1 font-medium text-foreground break-all">{currentUser?.github || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">LeetCode</p>
+                  <p className="mt-1 font-medium text-foreground break-all">{currentUser?.leetcode || "Not set"}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -2391,6 +2576,16 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label>Roll Number</Label>
+                  <Input value={memberForm.roll_number} onChange={(event) => setMemberForm((prev) => ({ ...prev, roll_number: event.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Department</Label>
+                  <Input value={memberForm.department} onChange={(event) => setMemberForm((prev) => ({ ...prev, department: event.target.value }))} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label>Role</Label>
                   <Select value={memberForm.role_id} onValueChange={(value) => setMemberForm((prev) => ({ ...prev, role_id: value }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -2400,6 +2595,12 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <Label>Position</Label>
+                  <Input value={memberForm.position} onChange={(event) => setMemberForm((prev) => ({ ...prev, position: event.target.value }))} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label>Team</Label>
                   <Select value={memberForm.team_id || "none"} onValueChange={(value) => setMemberForm((prev) => ({ ...prev, team_id: value === "none" ? "" : value }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -2408,6 +2609,48 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                       {teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Special Lab</Label>
+                  <Input value={memberForm.special_lab} onChange={(event) => setMemberForm((prev) => ({ ...prev, special_lab: event.target.value }))} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Primary Skill</Label>
+                  <Input value={memberForm.primary_skill} onChange={(event) => setMemberForm((prev) => ({ ...prev, primary_skill: event.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Secondary Skill</Label>
+                  <Input value={memberForm.secondary_skill} onChange={(event) => setMemberForm((prev) => ({ ...prev, secondary_skill: event.target.value }))} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Special Skill</Label>
+                <Input value={memberForm.special_skill} onChange={(event) => setMemberForm((prev) => ({ ...prev, special_skill: event.target.value }))} />
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>LinkedIn</Label>
+                  <Input value={memberForm.linkedin} onChange={(event) => setMemberForm((prev) => ({ ...prev, linkedin: event.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>GitHub</Label>
+                  <Input value={memberForm.github} onChange={(event) => setMemberForm((prev) => ({ ...prev, github: event.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>LeetCode</Label>
+                  <Input value={memberForm.leetcode} onChange={(event) => setMemberForm((prev) => ({ ...prev, leetcode: event.target.value }))} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Activity Points</Label>
+                  <Input type="number" value={memberForm.activity_points} onChange={(event) => setMemberForm((prev) => ({ ...prev, activity_points: event.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Reward Points</Label>
+                  <Input type="number" value={memberForm.reward_points} onChange={(event) => setMemberForm((prev) => ({ ...prev, reward_points: event.target.value }))} />
                 </div>
               </div>
               <div className="space-y-2">

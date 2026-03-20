@@ -2,6 +2,63 @@ const db = require("../db");
 const bcrypt = require("bcrypt");
 const { logActivity } = require("./activityLogController");
 
+const userSelectClause = `SELECT
+  u.id,
+  u.full_name,
+  u.email,
+  u.avatar_initials,
+  u.points,
+  u.activity_points,
+  u.reward_points,
+  u.cgpa,
+  u.joined_at,
+  u.is_active,
+  u.team_id,
+  u.roll_number,
+  u.department,
+  u.position,
+  u.special_lab,
+  u.primary_skill,
+  u.secondary_skill,
+  u.special_skill,
+  u.linkedin,
+  u.github,
+  u.leetcode,
+  t.name AS team_name,
+  u.role_id,
+  r.role_key,
+  r.display_name AS role_name
+FROM users u
+LEFT JOIN teams t ON t.id = u.team_id
+INNER JOIN roles r ON r.id = u.role_id`;
+
+function normalizeNullableString(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  const normalized = String(value).trim();
+  return normalized === "" ? null : normalized;
+}
+
+function normalizeNullableNumber(value, fieldName) {
+  if (value === undefined) {
+    return { value: undefined };
+  }
+
+  if (value === null || value === "") {
+    return { value: null };
+  }
+
+  const normalized = Number(value);
+
+  if (!Number.isFinite(normalized)) {
+    return { error: `${fieldName} must be a valid number.` };
+  }
+
+  return { value: normalized };
+}
+
 async function createUser(req, res) {
   try {
     const {
@@ -11,7 +68,19 @@ async function createUser(req, res) {
       team_id,
       password,
       avatar_initials,
-      joined_at
+      joined_at,
+      roll_number,
+      department,
+      position,
+      special_lab,
+      primary_skill,
+      secondary_skill,
+      special_skill,
+      linkedin,
+      github,
+      leetcode,
+      activity_points,
+      reward_points
     } = req.body;
 
     if (!full_name || !email || !role_id) {
@@ -58,6 +127,14 @@ async function createUser(req, res) {
         .map((part) => part[0]?.toUpperCase())
         .join("")
         .slice(0, 3);
+    const nextActivityPoints = normalizeNullableNumber(activity_points ?? 0, "activity_points");
+    const nextRewardPoints = normalizeNullableNumber(reward_points ?? 0, "reward_points");
+
+    if (nextActivityPoints.error || nextRewardPoints.error) {
+      return res.status(400).json({
+        message: nextActivityPoints.error || nextRewardPoints.error
+      });
+    }
 
     const [result] = await db.execute(
       `INSERT INTO users (
@@ -67,8 +144,20 @@ async function createUser(req, res) {
         email,
         password_hash,
         avatar_initials,
-        joined_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        joined_at,
+        roll_number,
+        department,
+        position,
+        special_lab,
+        primary_skill,
+        secondary_skill,
+        special_skill,
+        linkedin,
+        github,
+        leetcode,
+        activity_points,
+        reward_points
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         role_id,
         team_id || null,
@@ -76,7 +165,19 @@ async function createUser(req, res) {
         email,
         passwordHash,
         resolvedAvatarInitials || null,
-        joined_at || null
+        joined_at || null,
+        normalizeNullableString(roll_number),
+        normalizeNullableString(department),
+        normalizeNullableString(position),
+        normalizeNullableString(special_lab),
+        normalizeNullableString(primary_skill),
+        normalizeNullableString(secondary_skill),
+        normalizeNullableString(special_skill),
+        normalizeNullableString(linkedin),
+        normalizeNullableString(github),
+        normalizeNullableString(leetcode),
+        nextActivityPoints.value ?? 0,
+        nextRewardPoints.value ?? 0
       ]
     );
 
@@ -99,28 +200,17 @@ async function createUser(req, res) {
 
 async function getAllUsers(req, res) {
   try {
-    const [rows] = await db.execute(
-      `SELECT 
-        u.id,
-        u.full_name,
-        u.email,
-        u.avatar_initials,
-        u.points,
-        u.activity_points,
-        u.reward_points,
-        u.cgpa,
-        u.joined_at,
-        u.is_active,
-        u.team_id,
-        t.name AS team_name,
-        u.role_id,
-        r.role_key,
-        r.display_name AS role_name
-      FROM users u
-      LEFT JOIN teams t ON t.id = u.team_id
-      INNER JOIN roles r ON r.id = u.role_id
-      ORDER BY u.id ASC`
-    );
+    let query = `${userSelectClause} WHERE u.is_active = 1`;
+    const params = [];
+
+    if (req.user.roleKey !== "captain") {
+      query += " AND u.team_id = ?";
+      params.push(req.user.teamId || 0);
+    }
+
+    query += " ORDER BY u.id ASC";
+
+    const [rows] = await db.execute(query, params);
 
     return res.status(200).json(rows);
   } catch (error) {
@@ -137,32 +227,18 @@ async function getUserById(req, res) {
       return res.status(403).json({ message: "Members can only view their own profile." });
     }
 
-    const [rows] = await db.execute(
-      `SELECT 
-        u.id,
-        u.full_name,
-        u.email,
-        u.avatar_initials,
-        u.points,
-        u.activity_points,
-        u.reward_points,
-        u.cgpa,
-        u.joined_at,
-        u.is_active,
-        u.team_id,
-        t.name AS team_name,
-        u.role_id,
-        r.role_key,
-        r.display_name AS role_name
-      FROM users u
-      LEFT JOIN teams t ON t.id = u.team_id
-      INNER JOIN roles r ON r.id = u.role_id
-      WHERE u.id = ?`,
-      [id]
-    );
+    const [rows] = await db.execute(`${userSelectClause} WHERE u.id = ?`, [id]);
 
     if (rows.length === 0) {
       return res.status(404).json({ message: "User not found." });
+    }
+
+    if (
+      req.user.roleKey !== "captain" &&
+      isLeader &&
+      rows[0].team_id !== req.user.teamId
+    ) {
+      return res.status(403).json({ message: "Leaders can only view members from their own team." });
     }
 
     return res.status(200).json(rows[0]);
@@ -174,16 +250,15 @@ async function getUserById(req, res) {
 async function updateUser(req, res) {
   try {
     const { id } = req.params;
-    const { full_name, email, team_id, role_id, avatar_initials, points, activity_points, joined_at, is_active } = req.body;
-    const isLeader = req.user.roleKey !== "member";
-    const normalizedIsActive =
-      typeof is_active === "boolean" ? Number(is_active) :
-      typeof is_active === "number" ? is_active :
-      null;
-
-    if (!isLeader && Number(id) !== req.user.id) {
-      return res.status(403).json({ message: "Members can only update their own profile." });
-    }
+    const {
+      email,
+      team_id,
+      role_id,
+      activity_points,
+      reward_points,
+      points,
+      is_active
+    } = req.body;
 
     const [existingUsers] = await db.execute("SELECT id FROM users WHERE id = ?", [id]);
 
@@ -202,48 +277,87 @@ async function updateUser(req, res) {
       }
     }
 
-    const nextRoleId = isLeader && role_id ? role_id : null;
-
-    if (nextRoleId) {
-      const [roleRows] = await db.execute("SELECT id FROM roles WHERE id = ?", [nextRoleId]);
+    if (role_id !== undefined && role_id !== null) {
+      const [roleRows] = await db.execute("SELECT id FROM roles WHERE id = ?", [role_id]);
 
       if (roleRows.length === 0) {
         return res.status(400).json({ message: "Invalid role_id." });
       }
     }
 
-    await db.execute(
-      `UPDATE users
-       SET full_name = COALESCE(?, full_name),
-           email = COALESCE(?, email),
-           team_id = COALESCE(?, team_id),
-           role_id = COALESCE(?, role_id),
-           avatar_initials = COALESCE(?, avatar_initials),
-           points = COALESCE(?, points),
-           activity_points = COALESCE(?, activity_points),
-           joined_at = COALESCE(?, joined_at),
-           is_active = COALESCE(?, is_active)
-       WHERE id = ?`,
-      [
-        full_name || null,
-        email || null,
-        team_id || null,
-        nextRoleId,
-        avatar_initials || null,
-        typeof points === "number" ? points : null,
-        typeof activity_points === "number" ? activity_points : null,
-        joined_at || null,
-        normalizedIsActive,
-        id
-      ]
-    );
+    if (team_id) {
+      const [teams] = await db.execute("SELECT id FROM teams WHERE id = ?", [team_id]);
+
+      if (teams.length === 0) {
+        return res.status(400).json({ message: "Invalid team_id." });
+      }
+    }
+
+    const numericFields = {
+      role_id,
+      team_id,
+      points,
+      activity_points,
+      reward_points,
+      is_active:
+        typeof is_active === "boolean" ? Number(is_active) :
+        is_active
+    };
+    const normalizedPayload = {};
+    const stringFields = [
+      "full_name",
+      "email",
+      "avatar_initials",
+      "joined_at",
+      "roll_number",
+      "department",
+      "position",
+      "special_lab",
+      "primary_skill",
+      "secondary_skill",
+      "special_skill",
+      "linkedin",
+      "github",
+      "leetcode"
+    ];
+
+    for (const field of stringFields) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        normalizedPayload[field] = normalizeNullableString(req.body[field]);
+      }
+    }
+
+    for (const [field, value] of Object.entries(numericFields)) {
+      if (value === undefined) {
+        continue;
+      }
+
+      if (value === null || value === "") {
+        normalizedPayload[field] = null;
+        continue;
+      }
+
+      const normalized = Number(value);
+
+      if (!Number.isFinite(normalized)) {
+        return res.status(400).json({ message: `${field} must be a valid number.` });
+      }
+
+      normalizedPayload[field] = normalized;
+    }
+
+    if (Object.keys(normalizedPayload).length === 0) {
+      return res.status(400).json({ message: "No valid fields were provided for update." });
+    }
+
+    await db.query("UPDATE users SET ? WHERE id = ?", [normalizedPayload, id]);
 
     await logActivity({
       userId: req.user.id,
       action: "updated user",
       targetType: "user",
       targetId: Number(id),
-      targetLabel: full_name || `User ${id}`
+      targetLabel: normalizedPayload.full_name || `User ${id}`
     });
 
     return res.status(200).json({ message: "User updated successfully." });
@@ -295,29 +409,7 @@ async function updateUserPerformance(req, res) {
       [nextActivityPoints, nextRewardPoints, nextCgpa, id]
     );
 
-    const [updatedRows] = await db.execute(
-      `SELECT 
-        u.id,
-        u.full_name,
-        u.email,
-        u.avatar_initials,
-        u.points,
-        u.activity_points,
-        u.reward_points,
-        u.cgpa,
-        u.joined_at,
-        u.is_active,
-        u.team_id,
-        t.name AS team_name,
-        u.role_id,
-        r.role_key,
-        r.display_name AS role_name
-      FROM users u
-      LEFT JOIN teams t ON t.id = u.team_id
-      INNER JOIN roles r ON r.id = u.role_id
-      WHERE u.id = ?`,
-      [id]
-    );
+    const [updatedRows] = await db.execute(`${userSelectClause} WHERE u.id = ?`, [id]);
 
     await logActivity({
       userId: req.user.id,

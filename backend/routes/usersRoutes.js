@@ -4,12 +4,12 @@ const { allowLeadersOnly, allowRoles } = require("../middleware/roleMiddleware")
 
 const router = express.Router();
 
-router.post("/", allowLeadersOnly, createUser);
+router.post("/", allowRoles("captain"), createUser);
 router.get("/", allowLeadersOnly, getAllUsers);
 router.get("/leaderboard", getLeaderboard);
 router.get("/:id", getUserById);
-router.put("/:id/performance", updateUserPerformance);
-router.put("/:id", updateUser);
+router.put("/:id/performance", allowRoles("captain"), updateUserPerformance);
+router.put("/:id", allowRoles("captain"), updateUser);
 router.delete("/:id", allowRoles("captain"), deleteUser);
 
 module.exports = router;
