@@ -131,6 +131,8 @@ async function addMembersToTeam(req, res) {
     const { teamId } = req.params;
     const { memberIds } = req.body;
 
+    console.log("Route hit: PUT /api/teams/" + teamId + "/add-members", { memberIds })
+
     if (!Array.isArray(memberIds) || memberIds.length === 0) {
       return res.status(400).json({ message: "memberIds must be a non-empty array." });
     }
