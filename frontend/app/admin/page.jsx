@@ -124,14 +124,37 @@ const emptyMemberForm = {
   department: "",
   position: "",
   special_lab: "",
-  primary_skill: "",
-  secondary_skill: "",
-  special_skill: "",
+  primary_skill_1: "",
+  primary_skill_2: "",
+  secondary_skill_1: "",
+  secondary_skill_2: "",
+  special_skill_1: "",
+  special_skill_2: "",
   linkedin: "",
   github: "",
   leetcode: "",
   activity_points: "0",
   reward_points: "0",
+}
+
+function splitSkillPair(value) {
+  const parts = String(value || "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  return [parts[0] || "", parts[1] || ""]
+}
+
+function joinSkillPair(first, second) {
+  return [first, second]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .join(", ")
+}
+
+function formatSkillPair(first, second) {
+  return [first, second].filter(Boolean).join(", ") || "Not set"
 }
 
 function formatDate(value) {
@@ -193,6 +216,10 @@ function buildTargetLabel(item) {
 }
 
 function normalizeUser(user, taskCount = 0) {
+  const [primarySkill1, primarySkill2] = splitSkillPair(user.primary_skill)
+  const [secondarySkill1, secondarySkill2] = splitSkillPair(user.secondary_skill)
+  const [specialSkill1, specialSkill2] = splitSkillPair(user.special_skill)
+
   return {
     id: String(user.id),
     name: user.full_name,
@@ -215,8 +242,14 @@ function normalizeUser(user, taskCount = 0) {
     position: user.position || "",
     special_lab: user.special_lab || "",
     primary_skill: user.primary_skill || "",
+    primary_skill_1: primarySkill1,
+    primary_skill_2: primarySkill2,
     secondary_skill: user.secondary_skill || "",
+    secondary_skill_1: secondarySkill1,
+    secondary_skill_2: secondarySkill2,
     special_skill: user.special_skill || "",
+    special_skill_1: specialSkill1,
+    special_skill_2: specialSkill2,
     linkedin: user.linkedin || "",
     github: user.github || "",
     leetcode: user.leetcode || "",
@@ -695,9 +728,9 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
         department: memberForm.department,
         position: memberForm.position,
         special_lab: memberForm.special_lab,
-        primary_skill: memberForm.primary_skill,
-        secondary_skill: memberForm.secondary_skill,
-        special_skill: memberForm.special_skill,
+        primary_skill: joinSkillPair(memberForm.primary_skill_1, memberForm.primary_skill_2),
+        secondary_skill: joinSkillPair(memberForm.secondary_skill_1, memberForm.secondary_skill_2),
+        special_skill: joinSkillPair(memberForm.special_skill_1, memberForm.special_skill_2),
         linkedin: memberForm.linkedin,
         github: memberForm.github,
         leetcode: memberForm.leetcode,
@@ -725,9 +758,12 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       department: member.department || "",
       position: member.position || "",
       special_lab: member.special_lab || "",
-      primary_skill: member.primary_skill || "",
-      secondary_skill: member.secondary_skill || "",
-      special_skill: member.special_skill || "",
+      primary_skill_1: member.primary_skill_1 || "",
+      primary_skill_2: member.primary_skill_2 || "",
+      secondary_skill_1: member.secondary_skill_1 || "",
+      secondary_skill_2: member.secondary_skill_2 || "",
+      special_skill_1: member.special_skill_1 || "",
+      special_skill_2: member.special_skill_2 || "",
       linkedin: member.linkedin || "",
       github: member.github || "",
       leetcode: member.leetcode || "",
@@ -752,9 +788,9 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           department: memberForm.department,
           position: memberForm.position,
           special_lab: memberForm.special_lab,
-          primary_skill: memberForm.primary_skill,
-          secondary_skill: memberForm.secondary_skill,
-          special_skill: memberForm.special_skill,
+          primary_skill: joinSkillPair(memberForm.primary_skill_1, memberForm.primary_skill_2),
+          secondary_skill: joinSkillPair(memberForm.secondary_skill_1, memberForm.secondary_skill_2),
+          special_skill: joinSkillPair(memberForm.special_skill_1, memberForm.special_skill_2),
           linkedin: memberForm.linkedin,
           github: memberForm.github,
           leetcode: memberForm.leetcode,
@@ -1368,8 +1404,16 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 <p className="mt-1 font-medium text-foreground">{currentUser?.position || "Not set"}</p>
               </div>
               <div className="rounded-lg bg-muted/50 p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Primary Skill</p>
-                <p className="mt-1 font-medium text-foreground">{currentUser?.primary_skill || "Not set"}</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Primary Skills</p>
+                <p className="mt-1 font-medium text-foreground">{formatSkillPair(currentUser?.primary_skill_1, currentUser?.primary_skill_2)}</p>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Secondary Skills</p>
+                <p className="mt-1 font-medium text-foreground">{formatSkillPair(currentUser?.secondary_skill_1, currentUser?.secondary_skill_2)}</p>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Special Skills</p>
+                <p className="mt-1 font-medium text-foreground">{formatSkillPair(currentUser?.special_skill_1, currentUser?.special_skill_2)}</p>
               </div>
               <div className="rounded-lg bg-muted/50 p-4">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Reward Points</p>
@@ -2281,16 +2325,16 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   <p className="mt-1 font-medium text-foreground">{currentUser?.special_lab || "Not set"}</p>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Primary Skill</p>
-                  <p className="mt-1 font-medium text-foreground">{currentUser?.primary_skill || "Not set"}</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Primary Skills</p>
+                  <p className="mt-1 font-medium text-foreground">{formatSkillPair(currentUser?.primary_skill_1, currentUser?.primary_skill_2)}</p>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Secondary Skill</p>
-                  <p className="mt-1 font-medium text-foreground">{currentUser?.secondary_skill || "Not set"}</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Secondary Skills</p>
+                  <p className="mt-1 font-medium text-foreground">{formatSkillPair(currentUser?.secondary_skill_1, currentUser?.secondary_skill_2)}</p>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Special Skill</p>
-                  <p className="mt-1 font-medium text-foreground">{currentUser?.special_skill || "Not set"}</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Special Skills</p>
+                  <p className="mt-1 font-medium text-foreground">{formatSkillPair(currentUser?.special_skill_1, currentUser?.special_skill_2)}</p>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-4">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">LinkedIn</p>
@@ -2560,7 +2604,9 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           setMemberModalOpen(open)
           if (!open) resetMemberForm()
         }}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="w-full max-w-2xl overflow-hidden border-0 bg-transparent p-0 shadow-none">
+            <div className="rounded-lg bg-white shadow-xl dark:bg-background">
+              <div className="max-h-[90vh] overflow-y-auto p-5">
             <DialogHeader>
               <DialogTitle>{editingMemberId ? "Edit Member" : "Add Member"}</DialogTitle>
               <DialogDescription>{editingMemberId ? "Update member details." : "Create a new member account."}</DialogDescription>
@@ -2568,20 +2614,20 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
             <div className="space-y-4 py-2">
               <div className="space-y-2">
                 <Label>Full Name</Label>
-                <Input value={memberForm.full_name} onChange={(event) => setMemberForm((prev) => ({ ...prev, full_name: event.target.value }))} />
+                <Input className="mb-3 w-full rounded border p-2" value={memberForm.full_name} onChange={(event) => setMemberForm((prev) => ({ ...prev, full_name: event.target.value }))} />
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
-                <Input type="email" value={memberForm.email} onChange={(event) => setMemberForm((prev) => ({ ...prev, email: event.target.value }))} />
+                <Input className="mb-3 w-full rounded border p-2" type="email" value={memberForm.email} onChange={(event) => setMemberForm((prev) => ({ ...prev, email: event.target.value }))} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Roll Number</Label>
-                  <Input value={memberForm.roll_number} onChange={(event) => setMemberForm((prev) => ({ ...prev, roll_number: event.target.value }))} />
+                  <Input className="mb-3 w-full rounded border p-2" value={memberForm.roll_number} onChange={(event) => setMemberForm((prev) => ({ ...prev, roll_number: event.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Department</Label>
-                  <Input value={memberForm.department} onChange={(event) => setMemberForm((prev) => ({ ...prev, department: event.target.value }))} />
+                  <Input className="mb-3 w-full rounded border p-2" value={memberForm.department} onChange={(event) => setMemberForm((prev) => ({ ...prev, department: event.target.value }))} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -2596,7 +2642,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 </div>
                 <div className="space-y-2">
                   <Label>Position</Label>
-                  <Input value={memberForm.position} onChange={(event) => setMemberForm((prev) => ({ ...prev, position: event.target.value }))} />
+                  <Input className="mb-3 w-full rounded border p-2" value={memberForm.position} onChange={(event) => setMemberForm((prev) => ({ ...prev, position: event.target.value }))} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -2612,56 +2658,83 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 </div>
                 <div className="space-y-2">
                   <Label>Special Lab</Label>
-                  <Input value={memberForm.special_lab} onChange={(event) => setMemberForm((prev) => ({ ...prev, special_lab: event.target.value }))} />
+                  <Input className="mb-3 w-full rounded border p-2" value={memberForm.special_lab} onChange={(event) => setMemberForm((prev) => ({ ...prev, special_lab: event.target.value }))} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Primary Skill</Label>
-                  <Input value={memberForm.primary_skill} onChange={(event) => setMemberForm((prev) => ({ ...prev, primary_skill: event.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Secondary Skill</Label>
-                  <Input value={memberForm.secondary_skill} onChange={(event) => setMemberForm((prev) => ({ ...prev, secondary_skill: event.target.value }))} />
+              <div className="space-y-3">
+                <h3 className="mt-4 font-semibold text-foreground">Primary Skills</h3>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label className="text-sm font-medium">Primary Skill 1</Label>
+                    <Input className="mb-3 w-full rounded border p-2" placeholder="Primary Skill 1" value={memberForm.primary_skill_1} onChange={(event) => setMemberForm((prev) => ({ ...prev, primary_skill_1: event.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Primary Skill 2</Label>
+                    <Input className="mb-3 w-full rounded border p-2" placeholder="Primary Skill 2" value={memberForm.primary_skill_2} onChange={(event) => setMemberForm((prev) => ({ ...prev, primary_skill_2: event.target.value }))} />
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Special Skill</Label>
-                <Input value={memberForm.special_skill} onChange={(event) => setMemberForm((prev) => ({ ...prev, special_skill: event.target.value }))} />
+              <div className="space-y-3">
+                <h3 className="mt-4 font-semibold text-foreground">Secondary Skills</h3>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label className="text-sm font-medium">Secondary Skill 1</Label>
+                    <Input className="mb-3 w-full rounded border p-2" placeholder="Secondary Skill 1" value={memberForm.secondary_skill_1} onChange={(event) => setMemberForm((prev) => ({ ...prev, secondary_skill_1: event.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Secondary Skill 2</Label>
+                    <Input className="mb-3 w-full rounded border p-2" placeholder="Secondary Skill 2" value={memberForm.secondary_skill_2} onChange={(event) => setMemberForm((prev) => ({ ...prev, secondary_skill_2: event.target.value }))} />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <h3 className="mt-4 font-semibold text-foreground">Special Skills</h3>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label className="text-sm font-medium">Special Skill 1</Label>
+                    <Input className="mb-3 w-full rounded border p-2" placeholder="Special Skill 1" value={memberForm.special_skill_1} onChange={(event) => setMemberForm((prev) => ({ ...prev, special_skill_1: event.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Special Skill 2</Label>
+                    <Input className="mb-3 w-full rounded border p-2" placeholder="Special Skill 2" value={memberForm.special_skill_2} onChange={(event) => setMemberForm((prev) => ({ ...prev, special_skill_2: event.target.value }))} />
+                  </div>
+                </div>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
                   <Label>LinkedIn</Label>
-                  <Input value={memberForm.linkedin} onChange={(event) => setMemberForm((prev) => ({ ...prev, linkedin: event.target.value }))} />
+                  <Input className="mb-3 w-full rounded border p-2" value={memberForm.linkedin} onChange={(event) => setMemberForm((prev) => ({ ...prev, linkedin: event.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>GitHub</Label>
-                  <Input value={memberForm.github} onChange={(event) => setMemberForm((prev) => ({ ...prev, github: event.target.value }))} />
+                  <Input className="mb-3 w-full rounded border p-2" value={memberForm.github} onChange={(event) => setMemberForm((prev) => ({ ...prev, github: event.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>LeetCode</Label>
-                  <Input value={memberForm.leetcode} onChange={(event) => setMemberForm((prev) => ({ ...prev, leetcode: event.target.value }))} />
+                  <Input className="mb-3 w-full rounded border p-2" value={memberForm.leetcode} onChange={(event) => setMemberForm((prev) => ({ ...prev, leetcode: event.target.value }))} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Activity Points</Label>
-                  <Input type="number" value={memberForm.activity_points} onChange={(event) => setMemberForm((prev) => ({ ...prev, activity_points: event.target.value }))} />
+                  <Input className="mb-3 w-full rounded border p-2" type="number" value={memberForm.activity_points} onChange={(event) => setMemberForm((prev) => ({ ...prev, activity_points: event.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Reward Points</Label>
-                  <Input type="number" value={memberForm.reward_points} onChange={(event) => setMemberForm((prev) => ({ ...prev, reward_points: event.target.value }))} />
+                  <Input className="mb-3 w-full rounded border p-2" type="number" value={memberForm.reward_points} onChange={(event) => setMemberForm((prev) => ({ ...prev, reward_points: event.target.value }))} />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Temporary Password</Label>
-                <Input type="text" value={memberForm.password} onChange={(event) => setMemberForm((prev) => ({ ...prev, password: event.target.value }))} />
+                <Input className="mb-3 w-full rounded border p-2" type="text" value={memberForm.password} onChange={(event) => setMemberForm((prev) => ({ ...prev, password: event.target.value }))} />
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setMemberModalOpen(false)}>Cancel</Button>
               <Button onClick={handleSaveMember}>{editingMemberId ? "Save Changes" : "Create Member"}</Button>
             </DialogFooter>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
 
