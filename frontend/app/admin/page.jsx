@@ -196,20 +196,19 @@ function formatDateTime(value) {
 function formatRelativeTime(value) {
   const date = new Date(value)
   if (!Number.isNaN(date.getTime())) {
-    const parsed = dayjs(date).add(5.5, "hour")
+    const parsed = dayjs(date)
     if (parsed.isValid()) {
       return parsed.fromNow()
     }
   }
 
-  const parsed = dayjs(value).add(5.5, "hour")
+  const parsed = dayjs(value)
   if (parsed.isValid()) {
     return parsed.fromNow()
   }
 
   const now = new Date()
-  const adjustedDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000)
-  const diff = (now - adjustedDate) / 1000
+  const diff = (now - date) / 1000
 
   if (!value || Number.isNaN(date.getTime()) || diff < 60) return "just now"
   if (diff < 3600) return `${Math.floor(diff / 60)} min ago`
