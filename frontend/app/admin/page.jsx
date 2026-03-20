@@ -161,6 +161,20 @@ function getSkillItems(first, second) {
   return [first, second].filter(Boolean)
 }
 
+function formatExternalLink(value) {
+  const raw = String(value || "").trim()
+
+  if (!raw) {
+    return null
+  }
+
+  if (/^https?:\/\//i.test(raw)) {
+    return raw
+  }
+
+  return `https://${raw}`
+}
+
 function formatDate(value) {
   if (!value) return "Not set"
   const date = new Date(value)
