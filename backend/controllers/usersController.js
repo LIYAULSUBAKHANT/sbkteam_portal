@@ -119,19 +119,16 @@ async function createUser(req, res) {
       }
     }
 
-    const resolvedPassword = password || "1234";
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(resolvedPassword, saltRounds);
-    const resolvedAvatarInitials =
-      avatar_initials ||
-      full_name
-        .split(" ")
-        .filter(Boolean)
-        .map((part) => part[0]?.toUpperCase())
-        .join("")
-        .slice(0, 3);
-    const nextActivityPoints = normalizeNullableNumber(activity_points ?? 0, "activity_points");
-    const nextRewardPoints = normalizeNullableNumber(reward_points ?? 0, "reward_points");
+    console.log("REQ BODY:", req.body);
+
+    const password_hash = password || "1234";
+    const safeRoleId = role_id || 3;
+    const safeTeamId = team_id || null;
+    const safeActivityPoints = activity_points ?? 0;
+    const safeRewardPoints = reward_points ?? 0;
+
+    const nextActivityPoints = normalizeNullableNumber(safeActivityPoints, "activity_points");
+    const nextRewardPoints = normalizeNullableNumber(safeRewardPoints, "reward_points");
 
     if (nextActivityPoints.error || nextRewardPoints.error) {
       return res.status(400).json({
@@ -141,34 +138,33 @@ async function createUser(req, res) {
 
     const [result] = await db.execute(
       `INSERT INTO users (
-        role_id,
-        team_id,
         full_name,
         email,
         password_hash,
-        avatar_initials,
-        joined_at,
+        role_id,
+        team_id,
         roll_number,
         department,
         position,
         special_lab,
-        primary_skill,
-        secondary_skill,
-        special_skill,
+        primary_skill_1,
+        primary_skill_2,
+        secondary_skill_1,
+        secondary_skill_2,
+        special_skill_1,
+        special_skill_2,
         linkedin,
         github,
         leetcode,
         activity_points,
         reward_points
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        role_id,
-        team_id || null,
         full_name,
         email,
-        passwordHash,
-        resolvedAvatarInitials || null,
-        joined_at || null,
+        password_hash,
+        safeRoleId,
+        safeTeamId,
         normalizeNullableString(roll_number),
         normalizeNullableString(department),
         normalizeNullableString(position),
@@ -195,10 +191,7 @@ async function createUser(req, res) {
       targetLabel: full_name
     });
 
-    return res.status(201).json({
-      message: "User created successfully.",
-      userId: result.insertId
-    });
+    return res.json({ message: "User created successfully" });
   } catch (error) {
     console.error("CREATE USER ERROR:", error);
     return res.status(500).json({ message: "Failed to create user.", error: error.message });
