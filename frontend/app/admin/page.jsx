@@ -396,6 +396,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   const [notifications, setNotifications] = useState([])
   const [leaderboard, setLeaderboard] = useState([])
   const [memberModalOpen, setMemberModalOpen] = useState(false)
+  const [memberDetailsOpen, setMemberDetailsOpen] = useState(false)
   const [performanceModalOpen, setPerformanceModalOpen] = useState(false)
   const [teamModalOpen, setTeamModalOpen] = useState(false)
   const [projectModalOpen, setProjectModalOpen] = useState(false)
@@ -404,6 +405,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   const [announcementModalOpen, setAnnouncementModalOpen] = useState(false)
   const [reminderModalOpen, setReminderModalOpen] = useState(false)
   const [editingMemberId, setEditingMemberId] = useState(null)
+  const [selectedMember, setSelectedMember] = useState(null)
   const [editingTeamId, setEditingTeamId] = useState(null)
   const [editingProjectId, setEditingProjectId] = useState(null)
   const [editingTaskId, setEditingTaskId] = useState(null)
@@ -771,6 +773,11 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       reward_points: String(member.reward_points ?? 0),
     })
     setMemberModalOpen(true)
+  }
+
+  function openMemberDetailsModal(member) {
+    setSelectedMember(member)
+    setMemberDetailsOpen(true)
   }
 
   async function handleSaveMember() {
@@ -1580,16 +1587,10 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
               <thead className="bg-muted/50">
                 <tr>
                   <th className="p-4 text-left font-medium text-muted-foreground">Member</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Roll No</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Department</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Position</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Role</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Team</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Primary Skill</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">GitHub</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Activity Points</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Reward Points</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">CGPA</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Tasks</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Actions</th>
                 </tr>
@@ -1611,9 +1612,6 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 text-foreground">{member.roll_number || "-"}</td>
-                      <td className="p-4 text-foreground">{member.department || "-"}</td>
-                      <td className="p-4 text-foreground">{member.position || "-"}</td>
                       <td className="p-4">
                         <Badge className={cn("border", roleColors[member.role])}>
                           <RoleIcon className="mr-1 h-3 w-3" />
@@ -1621,25 +1619,16 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                         </Badge>
                       </td>
                       <td className="p-4 text-foreground">{member.team}</td>
-                      <td className="p-4 text-foreground">{member.primary_skill || "-"}</td>
-                      <td className="p-4 text-foreground">
-                        {member.github ? (
-                          <a
-                            href={member.github}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-primary underline-offset-4 hover:underline"
-                          >
-                            Profile
-                          </a>
-                        ) : "-"}
-                      </td>
                       <td className="p-4 text-foreground">{member.activity_points}</td>
                       <td className="p-4 text-foreground">{member.reward_points}</td>
-                      <td className="p-4 text-foreground">{member.cgpa}</td>
                       <td className="p-4 text-foreground">{member.tasks}</td>
                       <td className="p-4">
                         <div className="flex flex-wrap gap-2">
+                          {permissions.canEditMember ? (
+                            <Button size="sm" variant="outline" onClick={() => openMemberDetailsModal(member)}>
+                              View Details
+                            </Button>
+                          ) : null}
                           {permissions.canEditMember ? (
                             <Button size="sm" variant="secondary" onClick={() => openMemberEditModal(member)}>
                               Edit
@@ -2605,7 +2594,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           if (!open) resetMemberForm()
         }}>
           <DialogContent className="w-full max-w-2xl overflow-hidden border-0 bg-transparent p-0 shadow-none">
-            <div className="rounded-lg bg-white shadow-xl dark:bg-background">
+            <div className="rounded-lg border border-border bg-background shadow-xl">
               <div className="max-h-[90vh] overflow-y-auto p-5">
             <DialogHeader>
               <DialogTitle>{editingMemberId ? "Edit Member" : "Add Member"}</DialogTitle>
@@ -2735,6 +2724,87 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
             </DialogFooter>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={memberDetailsOpen} onOpenChange={(open) => {
+          setMemberDetailsOpen(open)
+          if (!open) {
+            setSelectedMember(null)
+          }
+        }}>
+          <DialogContent className="max-w-3xl border border-border bg-background">
+            <DialogHeader>
+              <DialogTitle>Member Details</DialogTitle>
+              <DialogDescription>Extended profile data for {selectedMember?.name || "this member"}.</DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[80vh] space-y-6 overflow-y-auto pr-2">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Name</p>
+                  <p className="mt-1 font-medium text-foreground">{selectedMember?.name || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Email</p>
+                  <p className="mt-1 font-medium text-foreground break-all">{selectedMember?.email || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Roll Number</p>
+                  <p className="mt-1 font-medium text-foreground">{selectedMember?.roll_number || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Department</p>
+                  <p className="mt-1 font-medium text-foreground">{selectedMember?.department || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Position</p>
+                  <p className="mt-1 font-medium text-foreground">{selectedMember?.position || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Special Lab</p>
+                  <p className="mt-1 font-medium text-foreground">{selectedMember?.special_lab || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Primary Skills</p>
+                  <p className="mt-1 font-medium text-foreground">{formatSkillPair(selectedMember?.primary_skill_1, selectedMember?.primary_skill_2)}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Secondary Skills</p>
+                  <p className="mt-1 font-medium text-foreground">{formatSkillPair(selectedMember?.secondary_skill_1, selectedMember?.secondary_skill_2)}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Special Skills</p>
+                  <p className="mt-1 font-medium text-foreground">{formatSkillPair(selectedMember?.special_skill_1, selectedMember?.special_skill_2)}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">LinkedIn</p>
+                  <p className="mt-1 font-medium text-foreground break-all">{selectedMember?.linkedin || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">GitHub</p>
+                  <p className="mt-1 font-medium text-foreground break-all">{selectedMember?.github || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">LeetCode</p>
+                  <p className="mt-1 font-medium text-foreground break-all">{selectedMember?.leetcode || "Not set"}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Activity Points</p>
+                  <p className="mt-1 font-medium text-foreground">{selectedMember?.activity_points || 0}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Reward Points</p>
+                  <p className="mt-1 font-medium text-foreground">{selectedMember?.reward_points || 0}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">CGPA</p>
+                  <p className="mt-1 font-medium text-foreground">{selectedMember?.cgpa || 0}</p>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setMemberDetailsOpen(false)}>Close</Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
