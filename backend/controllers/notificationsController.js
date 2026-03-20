@@ -10,8 +10,8 @@ async function createNotification(req, res) {
     }
 
     const [result] = await db.execute(
-      `INSERT INTO notifications (user_id, type, message)
-       VALUES (?, ?, ?)`,
+      `INSERT INTO notifications (user_id, type, message, created_at)
+       VALUES (?, ?, ?, NOW())`,
       [user_id, type, message]
     );
 

@@ -37,8 +37,8 @@ async function createNotificationsForReminder(title, targetType, targetTeamId, t
   await Promise.all(
     recipients.map((userId) =>
       db.execute(
-        `INSERT INTO notifications (user_id, type, message)
-         VALUES (?, 'reminder', ?)`,
+        `INSERT INTO notifications (user_id, type, message, created_at)
+         VALUES (?, 'reminder', ?, NOW())`,
         [userId, message]
       )
     )

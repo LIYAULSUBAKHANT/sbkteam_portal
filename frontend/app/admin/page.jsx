@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
+import dayjs from "dayjs"
+import relativeTime from "dayjs/plugin/relativeTime"
 import {
   AlertCircle,
   BarChart3,
@@ -69,6 +71,8 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost, apiPut, clearStoredAuth, getStoredAuth } from "@/lib/api"
 import { cn } from "@/lib/utils"
+
+dayjs.extend(relativeTime)
 
 const menuItems = [
   { name: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
@@ -189,23 +193,32 @@ function formatDateTime(value) {
   return date.toLocaleString()
 }
 
-import dayjs from 'dayjs'
-import relativeTime from 'dayjs/plugin/relativeTime'
-dayjs.extend(relativeTime)
+function parseRelativeTimeValue(value) {
+  if (!value) return null
+
+  if (typeof value === "string") {
+    const normalized = value.trim().replace(" ", "T")
+    const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(normalized)
+    return dayjs(hasTimezone ? normalized : `${normalized}+05:30`)
+  }
+
+  return dayjs(value)
+}
 
 function formatRelativeTime(value) {
-  try {
-    if (!value) return "Just now";
-    return dayjs(value).add(5.5, 'hour').fromNow();
-  } catch {
-    // Fallback per spec: "just now", minutes, hours, days
-    const now = new Date();
-    const diff = (now - new Date(value)) / 1000;
-    if (diff < 60) return "just now";
-    if (diff < 3600) return Math.floor(diff / 60) + " min ago";
-    if (diff < 86400) return Math.floor(diff / 3600) + " hrs ago";
-    return Math.floor(diff / 86400) + " days ago";
+  const parsed = parseRelativeTimeValue(value)
+  if (parsed?.isValid?.()) {
+    return parsed.fromNow()
   }
+
+  const now = new Date()
+  const timestamp = new Date(value)
+  const diff = (now - timestamp) / 1000
+
+  if (!value || Number.isNaN(timestamp.getTime()) || diff < 60) return "just now"
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hrs ago`
+  return `${Math.floor(diff / 86400)} days ago`
 }
 
 function getPermissions(role) {
