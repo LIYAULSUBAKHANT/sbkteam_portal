@@ -73,9 +73,12 @@ async function createUser(req, res) {
       department,
       position,
       special_lab,
-      primary_skill,
-      secondary_skill,
-      special_skill,
+      primary_skill_1,
+      primary_skill_2,
+      secondary_skill_1,
+      secondary_skill_2,
+      special_skill_1,
+      special_skill_2,
       linkedin,
       github,
       leetcode,
@@ -170,9 +173,12 @@ async function createUser(req, res) {
         normalizeNullableString(department),
         normalizeNullableString(position),
         normalizeNullableString(special_lab),
-        normalizeNullableString(primary_skill),
-        normalizeNullableString(secondary_skill),
-        normalizeNullableString(special_skill),
+        normalizeNullableString(primary_skill_1),
+        normalizeNullableString(primary_skill_2),
+        normalizeNullableString(secondary_skill_1),
+        normalizeNullableString(secondary_skill_2),
+        normalizeNullableString(special_skill_1),
+        normalizeNullableString(special_skill_2),
         normalizeNullableString(linkedin),
         normalizeNullableString(github),
         normalizeNullableString(leetcode),
@@ -194,6 +200,7 @@ async function createUser(req, res) {
       userId: result.insertId
     });
   } catch (error) {
+    console.error("CREATE USER ERROR:", error);
     return res.status(500).json({ message: "Failed to create user.", error: error.message });
   }
 }
