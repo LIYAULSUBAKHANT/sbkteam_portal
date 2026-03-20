@@ -73,6 +73,9 @@ async function createUser(req, res) {
       department,
       position,
       special_lab,
+      primary_skill,
+      secondary_skill,
+      special_skill,
       primary_skill_1,
       primary_skill_2,
       secondary_skill_1,
@@ -86,8 +89,8 @@ async function createUser(req, res) {
       reward_points
     } = req.body;
 
-    if (!full_name || !email || !role_id) {
-      return res.status(400).json({ message: "full_name, email, and role_id are required." });
+    if (!full_name || !email) {
+      return res.status(400).json({ message: "full_name and email are required." });
     }
 
     const [existingUsers] = await db.execute(
@@ -126,6 +129,28 @@ async function createUser(req, res) {
     const safeTeamId = team_id || null;
     const safeActivityPoints = activity_points ?? 0;
     const safeRewardPoints = reward_points ?? 0;
+
+    const splitSkills = (raw) => {
+      if (!raw) {
+        return [null, null];
+      }
+      const [first, second] = raw
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean);
+      return [first || null, second || null];
+    };
+
+    const [parsedPrimary1, parsedPrimary2] = splitSkills(primary_skill);
+    const [parsedSecondary1, parsedSecondary2] = splitSkills(secondary_skill);
+    const [parsedSpecial1, parsedSpecial2] = splitSkills(special_skill);
+
+    const finalPrimary1 = primary_skill_1?.trim() || parsedPrimary1 || null;
+    const finalPrimary2 = primary_skill_2?.trim() || parsedPrimary2 || null;
+    const finalSecondary1 = secondary_skill_1?.trim() || parsedSecondary1 || null;
+    const finalSecondary2 = secondary_skill_2?.trim() || parsedSecondary2 || null;
+    const finalSpecial1 = special_skill_1?.trim() || parsedSpecial1 || null;
+    const finalSpecial2 = special_skill_2?.trim() || parsedSpecial2 || null;
 
     const nextActivityPoints = normalizeNullableNumber(safeActivityPoints, "activity_points");
     const nextRewardPoints = normalizeNullableNumber(safeRewardPoints, "reward_points");
@@ -169,12 +194,12 @@ async function createUser(req, res) {
         normalizeNullableString(department),
         normalizeNullableString(position),
         normalizeNullableString(special_lab),
-        normalizeNullableString(primary_skill_1),
-        normalizeNullableString(primary_skill_2),
-        normalizeNullableString(secondary_skill_1),
-        normalizeNullableString(secondary_skill_2),
-        normalizeNullableString(special_skill_1),
-        normalizeNullableString(special_skill_2),
+        normalizeNullableString(finalPrimary1),
+        normalizeNullableString(finalPrimary2),
+        normalizeNullableString(finalSecondary1),
+        normalizeNullableString(finalSecondary2),
+        normalizeNullableString(finalSpecial1),
+        normalizeNullableString(finalSpecial2),
         normalizeNullableString(linkedin),
         normalizeNullableString(github),
         normalizeNullableString(leetcode),
@@ -313,18 +338,50 @@ async function updateUser(req, res) {
       "department",
       "position",
       "special_lab",
-      "primary_skill",
-      "secondary_skill",
-      "special_skill",
+      "primary_skill_1",
+      "primary_skill_2",
+      "secondary_skill_1",
+      "secondary_skill_2",
+      "special_skill_1",
+      "special_skill_2",
       "linkedin",
       "github",
       "leetcode"
     ];
 
+    const splitSkills = (raw) => {
+      if (!raw) {
+        return [null, null];
+      }
+      const [first, second] = raw
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean);
+      return [first || null, second || null];
+    };
+
     for (const field of stringFields) {
       if (Object.prototype.hasOwnProperty.call(req.body, field)) {
         normalizedPayload[field] = normalizeNullableString(req.body[field]);
       }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, "primary_skill")) {
+      const [p1, p2] = splitSkills(req.body.primary_skill);
+      if (p1 !== null) normalizedPayload.primary_skill_1 = p1;
+      if (p2 !== null) normalizedPayload.primary_skill_2 = p2;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, "secondary_skill")) {
+      const [s1, s2] = splitSkills(req.body.secondary_skill);
+      if (s1 !== null) normalizedPayload.secondary_skill_1 = s1;
+      if (s2 !== null) normalizedPayload.secondary_skill_2 = s2;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, "special_skill")) {
+      const [sp1, sp2] = splitSkills(req.body.special_skill);
+      if (sp1 !== null) normalizedPayload.special_skill_1 = sp1;
+      if (sp2 !== null) normalizedPayload.special_skill_2 = sp2;
     }
 
     for (const [field, value] of Object.entries(numericFields)) {
