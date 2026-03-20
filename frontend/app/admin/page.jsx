@@ -189,16 +189,14 @@ function formatDateTime(value) {
   return date.toLocaleString()
 }
 
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+dayjs.extend(relativeTime)
+
 function formatRelativeTime(value) {
   if (!value) return "Just now"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  const minutes = Math.round((Date.now() - date.getTime()) / 60000)
-  if (minutes <= 1) return "Just now"
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.round(hours / 24)}d ago`
+  const date = dayjs(value).add(5.5, 'hour') // IST offset fallback
+  return date.fromNow()
 }
 
 function getPermissions(role) {
