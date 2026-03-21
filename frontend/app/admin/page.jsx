@@ -237,16 +237,20 @@ function getPermissions(role) {
   const isCaptain = normalized === "captain"
   const isLeader = ["vice captain", "vice_captain", "manager", "strategist"].includes(normalized)
   const isMember = normalized === "member"
+  const isStrategist = normalized === "strategist"
 
   return {
     canAddMember: isCaptain,
     canEditMember: isCaptain,
     canViewDetails: isCaptain || isLeader || isMember,
-    canUpdatePerformance: isCaptain,
+    canUpdatePerformance: true,
+    canUpdateAnyPerformance: isCaptain,
     canDeleteRecords: isCaptain,
     canManageProjects: isCaptain || isLeader,
     canAssignTasks: isCaptain || isLeader,
     canAssignSkills: isCaptain || isLeader,
+    canEditAssignedSkills: isCaptain || isStrategist,
+    canDeleteAssignedSkills: isCaptain,
     canCreateAnnouncement: isCaptain || isLeader,
     canViewAnalytics: isCaptain || isLeader,
     canSyncPoints: isCaptain || isLeader,
@@ -475,6 +479,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   const [editingTeamId, setEditingTeamId] = useState(null)
   const [editingProjectId, setEditingProjectId] = useState(null)
   const [editingTaskId, setEditingTaskId] = useState(null)
+  const [editingSkillId, setEditingSkillId] = useState(null)
   const [editingAnnouncementId, setEditingAnnouncementId] = useState(null)
   const [editingReminderId, setEditingReminderId] = useState(null)
   const [memberForm, setMemberForm] = useState(emptyMemberForm)
@@ -767,6 +772,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       description: "",
       assigned_at: new Date().toISOString().split("T")[0],
     })
+    setEditingSkillId(null)
   }
 
   function resetAnnouncementForm() {
@@ -1127,20 +1133,39 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     setActionMessage("")
 
     try {
-      await apiPost("/api/weekly-skills", {
+      const payload = {
         user_id: Number(skillForm.user_id),
         skill_name: skillForm.skill_name,
         level: skillForm.level,
         description: skillForm.description,
         assigned_at: skillForm.assigned_at,
-      })
+      }
+
+      if (editingSkillId) {
+        await apiPatch(`/api/weekly-skills/${editingSkillId}`, payload)
+      } else {
+        await apiPost("/api/weekly-skills", payload)
+      }
+
       await refreshData()
       setSkillModalOpen(false)
       resetSkillForm()
-      setActionMessage("Weekly skill assigned successfully.")
+      setActionMessage(editingSkillId ? "Weekly skill updated successfully." : "Weekly skill assigned successfully.")
     } catch (error) {
-      setActionError(error.message || "Failed to assign skill.")
+      setActionError(error.message || (editingSkillId ? "Failed to update skill." : "Failed to assign skill."))
     }
+  }
+
+  function openSkillEditModal(skill) {
+    setEditingSkillId(skill.id)
+    setSkillForm({
+      user_id: skill.userId,
+      skill_name: skill.skillName,
+      level: skill.level || "Beginner",
+      description: skill.description === "No description provided." ? "" : skill.description,
+      assigned_at: skill.assignedAt ? String(skill.assignedAt).split("T")[0] : new Date().toISOString().split("T")[0],
+    })
+    setSkillModalOpen(true)
   }
 
   async function handleCreateAnnouncement() {
@@ -1413,16 +1438,32 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                         <h4 className="font-medium text-foreground">{skill.skillName}</h4>
                         <Badge className={cn("mt-1 border text-xs", levelColors[skill.level])}>{skill.level}</Badge>
                       </div>
-                      {skill.status === "Completed" ? (
-                        <Badge className="border-green-200 bg-green-100 text-green-800">
-                          <CheckCircle2 className="mr-1 h-3 w-3" />
-                          Completed
-                        </Badge>
-                      ) : (
-                        <Button size="sm" variant="outline" onClick={() => handleMarkSkillComplete(skill.id)}>
-                          Mark Complete
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {permissions.canEditAssignedSkills ? (
+                          <Button size="sm" variant="outline" onClick={() => openSkillEditModal(skill)}>
+                            Edit
+                          </Button>
+                        ) : null}
+                        {permissions.canDeleteAssignedSkills ? (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteItem(`/api/weekly-skills/${skill.id}`, "Weekly skill deleted successfully.", `Delete skill ${skill.skillName}?`)}
+                          >
+                            Delete
+                          </Button>
+                        ) : null}
+                        {skill.status === "Completed" ? (
+                          <Badge className="border-green-200 bg-green-100 text-green-800">
+                            <CheckCircle2 className="mr-1 h-3 w-3" />
+                            Completed
+                          </Badge>
+                        ) : (
+                          <Button size="sm" variant="outline" onClick={() => handleMarkSkillComplete(skill.id)}>
+                            Mark Complete
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <p className="text-sm text-muted-foreground">{skill.description}</p>
                     <p className="mt-2 text-xs text-muted-foreground">Assigned by {skill.assignedBy}</p>
@@ -1692,6 +1733,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
               <tbody className="divide-y divide-border">
                 {visibleMembers.map((member) => {
                   const RoleIcon = roleIcons[member.role] || Circle
+                  const canUpdateThisPerformance = permissions.canUpdateAnyPerformance || member.id === currentUser?.id
 
                   return (
                     <tr key={member.id} className="transition-colors hover:bg-muted/30">
@@ -1728,7 +1770,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                               Edit
                             </Button>
                           ) : null}
-                          {permissions.canUpdatePerformance ? (
+                          {permissions.canUpdatePerformance && canUpdateThisPerformance ? (
                             <Button size="sm" variant="outline" onClick={() => openPerformanceModal(member)}>
                               Update Performance
                             </Button>
@@ -2060,8 +2102,28 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   {groupedByMember[member.id].map((skill) => (
                     <div key={skill.id} className="rounded-lg border border-border bg-muted/50 p-3">
                       <div className="mb-2 flex items-start justify-between gap-3">
-                        <h4 className="text-sm font-medium text-foreground">{skill.skillName}</h4>
-                        <Badge className={cn("border text-xs", levelColors[skill.level])}>{skill.level}</Badge>
+                        <div>
+                          <h4 className="text-sm font-medium text-foreground">{skill.skillName}</h4>
+                          <Badge className={cn("mt-1 border text-xs", levelColors[skill.level])}>{skill.level}</Badge>
+                        </div>
+                        {(permissions.canEditAssignedSkills || permissions.canDeleteAssignedSkills) ? (
+                          <div className="flex items-center gap-2">
+                            {permissions.canEditAssignedSkills ? (
+                              <Button size="sm" variant="outline" onClick={() => openSkillEditModal(skill)}>
+                                Edit
+                              </Button>
+                            ) : null}
+                            {permissions.canDeleteAssignedSkills ? (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteItem(`/api/weekly-skills/${skill.id}`, "Weekly skill deleted successfully.", `Delete skill ${skill.skillName}?`)}
+                              >
+                                Delete
+                              </Button>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
                       <p className="mb-2 text-xs text-muted-foreground">{skill.description}</p>
                       <div className="mb-2 flex items-center justify-between">
@@ -3222,11 +3284,14 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={skillModalOpen} onOpenChange={setSkillModalOpen}>
+        <Dialog open={skillModalOpen} onOpenChange={(open) => {
+          setSkillModalOpen(open)
+          if (!open) resetSkillForm()
+        }}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Assign Weekly Skill</DialogTitle>
-              <DialogDescription>Assign a skill for a member.</DialogDescription>
+              <DialogTitle>{editingSkillId ? "Edit Weekly Skill" : "Assign Weekly Skill"}</DialogTitle>
+              <DialogDescription>{editingSkillId ? "Update this skill assignment." : "Assign a skill for a member."}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-2">
@@ -3267,7 +3332,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setSkillModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleAssignSkill}>Assign Skill</Button>
+              <Button onClick={handleAssignSkill}>{editingSkillId ? "Save Changes" : "Assign Skill"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

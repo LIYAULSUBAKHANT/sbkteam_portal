@@ -1,6 +1,14 @@
 const db = require("../db");
 const { logActivity } = require("./activityLogController");
 
+function canEditSkillAssignment(roleKey) {
+  return roleKey === "captain" || roleKey === "strategist";
+}
+
+function canDeleteSkillAssignment(roleKey) {
+  return roleKey === "captain";
+}
+
 async function assignSkill(req, res) {
   try {
     const { user_id, skill_id, skill_name, level, description, assigned_at } = req.body;
@@ -46,6 +54,65 @@ async function assignSkill(req, res) {
     });
   } catch (error) {
     return res.status(500).json({ message: "Failed to assign skill.", error: error.message });
+  }
+}
+
+async function updateSkill(req, res) {
+  try {
+    const { id } = req.params;
+    const { user_id, skill_id, skill_name, level, description, assigned_at, status } = req.body;
+
+    if (!canEditSkillAssignment(req.user.roleKey)) {
+      return res.status(403).json({ message: "You do not have permission to edit skill assignments." });
+    }
+
+    const [rows] = await db.execute(
+      "SELECT id, skill_name FROM weekly_skill_assignments WHERE id = ?",
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Skill assignment not found." });
+    }
+
+    const normalizedPayload = {};
+
+    if (user_id !== undefined) normalizedPayload.user_id = Number(user_id);
+    if (skill_id !== undefined) normalizedPayload.skill_id = skill_id ? Number(skill_id) : null;
+    if (skill_name !== undefined) normalizedPayload.skill_name = String(skill_name || "").trim() || null;
+    if (level !== undefined) normalizedPayload.level = String(level || "").trim() || "Beginner";
+    if (description !== undefined) normalizedPayload.description = String(description || "").trim() || null;
+    if (assigned_at !== undefined) normalizedPayload.assigned_at = assigned_at || null;
+    if (status !== undefined) normalizedPayload.status = String(status || "").trim() || "Pending";
+
+    if (Object.keys(normalizedPayload).length === 0) {
+      return res.status(400).json({ message: "No valid fields were provided for update." });
+    }
+
+    if (normalizedPayload.user_id !== undefined) {
+      const [users] = await db.execute("SELECT id FROM users WHERE id = ?", [normalizedPayload.user_id]);
+      if (users.length === 0) {
+        return res.status(400).json({ message: "Invalid user_id." });
+      }
+    }
+
+    if (normalizedPayload.skill_name === null) {
+      return res.status(400).json({ message: "skill_name is required." });
+    }
+
+    await db.query("UPDATE weekly_skill_assignments SET ? WHERE id = ?", [normalizedPayload, id]);
+
+    await logActivity({
+      userId: req.user.id,
+      action: "updated weekly skill",
+      targetType: "weekly_skill_assignment",
+      targetId: Number(id),
+      targetLabel: normalizedPayload.skill_name || rows[0].skill_name
+    });
+
+    return res.status(200).json({ message: "Skill updated successfully." });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to update skill.", error: error.message });
   }
 }
 
@@ -95,6 +162,39 @@ async function updateSkillStatus(req, res) {
   }
 }
 
+async function deleteSkill(req, res) {
+  try {
+    const { id } = req.params;
+
+    if (!canDeleteSkillAssignment(req.user.roleKey)) {
+      return res.status(403).json({ message: "You do not have permission to delete skill assignments." });
+    }
+
+    const [rows] = await db.execute(
+      "SELECT id, skill_name FROM weekly_skill_assignments WHERE id = ?",
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Skill assignment not found." });
+    }
+
+    await db.execute("DELETE FROM weekly_skill_assignments WHERE id = ?", [id]);
+
+    await logActivity({
+      userId: req.user.id,
+      action: "deleted weekly skill",
+      targetType: "weekly_skill_assignment",
+      targetId: Number(id),
+      targetLabel: rows[0].skill_name
+    });
+
+    return res.status(200).json({ message: "Skill deleted successfully." });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to delete skill.", error: error.message });
+  }
+}
+
 async function getSkillsByUser(req, res) {
   try {
     const requestedUserId = Number(req.params.userId);
@@ -130,4 +230,4 @@ async function getSkillsByUser(req, res) {
   }
 }
 
-module.exports = { assignSkill, updateSkillStatus, getSkillsByUser };
+module.exports = { assignSkill, updateSkill, updateSkillStatus, deleteSkill, getSkillsByUser };
