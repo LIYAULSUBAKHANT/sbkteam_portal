@@ -329,6 +329,8 @@ function normalizeLeaderboardUser(user) {
     id: String(user.id),
     name: user.full_name,
     activity_points: Number(user.activity_points || 0),
+    teamId: user.team_id ? String(user.team_id) : "",
+    team: user.team_name || "Unassigned",
     avatar: getInitials(user.full_name),
   }
 }
@@ -2252,8 +2254,8 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     const userSkills = skills.filter((skill) => skill.userId === currentUser?.id)
     const completedUserSkills = userSkills.filter((skill) => skill.status === "Completed").length
     const skillProgress = userSkills.length ? Math.round((completedUserSkills / userSkills.length) * 100) : 0
-    const teamMembers = members.filter((member) => member.team === currentUser?.team)
-    const comparisonPool = teamMembers.length > 1 ? teamMembers : members
+    const teamMembers = leaderboard.filter((member) => member.teamId === currentUser?.teamId)
+    const comparisonPool = teamMembers.length > 0 ? teamMembers : leaderboard
     const teamAverageActivity = comparisonPool.length
       ? Math.round(comparisonPool.reduce((sum, member) => sum + member.activity_points, 0) / comparisonPool.length)
       : 0

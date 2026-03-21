@@ -592,12 +592,15 @@ async function getLeaderboard(req, res) {
   try {
     const [rows] = await db.execute(
       `SELECT
-        id,
-        full_name,
-        activity_points
-      FROM users
-      WHERE is_active = 1
-      ORDER BY activity_points DESC, full_name ASC`
+        u.id,
+        u.full_name,
+        u.activity_points,
+        u.team_id,
+        t.name AS team_name
+      FROM users u
+      LEFT JOIN teams t ON t.id = u.team_id
+      WHERE u.is_active = 1
+      ORDER BY u.activity_points DESC, u.full_name ASC`
     );
 
     return res.status(200).json(rows);
