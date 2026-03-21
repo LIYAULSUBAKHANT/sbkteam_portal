@@ -243,6 +243,7 @@ function getPermissions(role) {
     canAddMember: isCaptain,
     canEditMember: isCaptain,
     canViewDetails: isCaptain || isLeader || isMember,
+    canViewPerformance: true,
     canUpdatePerformance: true,
     canUpdateAnyPerformance: isCaptain,
     canDeleteRecords: isCaptain,
@@ -252,6 +253,7 @@ function getPermissions(role) {
     canEditAssignedSkills: isCaptain || isStrategist,
     canDeleteAssignedSkills: isCaptain,
     canCreateAnnouncement: isCaptain || isLeader,
+    canViewLeaderboard: isCaptain || isLeader,
     canViewAnalytics: isCaptain || isLeader,
     canSyncPoints: isCaptain || isLeader,
   }
@@ -674,7 +676,10 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
 
   const permissions = useMemo(() => getPermissions(currentUser?.role || "Member"), [currentUser])
   const isMember = currentUser?.roleKey === "member"
-  const visibleMenuItems = useMemo(() => menuItems, [])
+  const visibleMenuItems = useMemo(
+    () => menuItems.filter((item) => item.key !== "leaderboard" || permissions.canViewLeaderboard),
+    [permissions.canViewLeaderboard]
+  )
   const visibleTasks = useMemo(
     () => (isMember ? tasks.filter((task) => task.assignedTo === currentUser?.id) : tasks),
     [currentUser?.id, isMember, tasks]
@@ -2159,6 +2164,18 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   }
 
   function renderLeaderboard() {
+    if (!permissions.canViewLeaderboard) {
+      return (
+        <Card className="border border-border shadow-sm">
+          <CardContent className="py-12 text-center">
+            <Trophy className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+            <h3 className="mb-2 text-lg font-semibold text-foreground">Access Restricted</h3>
+            <p className="text-muted-foreground">Leaderboard is visible only to captain and leaders.</p>
+          </CardContent>
+        </Card>
+      )
+    }
+
     const rankedMembers = [...leaderboard].sort((a, b) => b.activity_points - a.activity_points)
 
     return (
@@ -2217,19 +2234,18 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   }
 
   function renderPerformance() {
-    if (!permissions.canViewAnalytics) {
+    if (!permissions.canViewPerformance) {
       return (
         <Card className="border border-border shadow-sm">
           <CardContent className="py-12 text-center">
             <Eye className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <h3 className="mb-2 text-lg font-semibold text-foreground">Access Restricted</h3>
-            <p className="text-muted-foreground">You do not have permission to view performance analytics.</p>
+            <p className="text-muted-foreground">You do not have permission to view performance.</p>
           </CardContent>
         </Card>
       )
     }
 
-    const totalScore = (currentUser?.activity_points || 0) + (currentUser?.reward_points || 0)
     const userTasks = tasks.filter((task) => task.assignedTo === currentUser?.id)
     const completedTasks = userTasks.filter((task) => task.status === "Done").length
     const taskProgress = userTasks.length ? Math.round((completedTasks / userTasks.length) * 100) : 0
@@ -2267,7 +2283,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           <p className="text-muted-foreground">Insight-driven view of your scores, progress, and contribution standing.</p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Card className="border border-border shadow-sm">
             <CardContent className="p-6">
               <p className="text-sm text-muted-foreground">Activity Points</p>
@@ -2287,13 +2303,6 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
               <p className="text-sm text-muted-foreground">CGPA</p>
               <p className="text-3xl font-bold text-foreground">{currentUser?.cgpa || 0}</p>
               <p className="mt-1 text-xs text-muted-foreground">Academic performance snapshot</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-border shadow-sm">
-            <CardContent className="p-6">
-              <p className="text-sm text-muted-foreground">Total Score</p>
-              <p className="text-3xl font-bold text-foreground">{totalScore}</p>
-              <p className="mt-1 text-xs text-muted-foreground">Activity + reward combined</p>
             </CardContent>
           </Card>
         </div>
