@@ -272,9 +272,15 @@ function buildTargetLabel(item) {
 }
 
 function normalizeUser(user, taskCount = 0) {
-  const [primarySkill1, primarySkill2] = splitSkillPair(user.primary_skill)
-  const [secondarySkill1, secondarySkill2] = splitSkillPair(user.secondary_skill)
-  const [specialSkill1, specialSkill2] = splitSkillPair(user.special_skill)
+  const [fallbackPrimary1, fallbackPrimary2] = splitSkillPair(user.primary_skill)
+  const [fallbackSecondary1, fallbackSecondary2] = splitSkillPair(user.secondary_skill)
+  const [fallbackSpecial1, fallbackSpecial2] = splitSkillPair(user.special_skill)
+  const primarySkill1 = user.primary_skill_1 || fallbackPrimary1
+  const primarySkill2 = user.primary_skill_2 || fallbackPrimary2
+  const secondarySkill1 = user.secondary_skill_1 || fallbackSecondary1
+  const secondarySkill2 = user.secondary_skill_2 || fallbackSecondary2
+  const specialSkill1 = user.special_skill_1 || fallbackSpecial1
+  const specialSkill2 = user.special_skill_2 || fallbackSpecial2
 
   return {
     id: String(user.id),
@@ -297,13 +303,13 @@ function normalizeUser(user, taskCount = 0) {
     department: user.department || "",
     position: user.position || "",
     special_lab: user.special_lab || "",
-    primary_skill: user.primary_skill || "",
+    primary_skill: user.primary_skill || joinSkillPair(primarySkill1, primarySkill2),
     primary_skill_1: primarySkill1,
     primary_skill_2: primarySkill2,
-    secondary_skill: user.secondary_skill || "",
+    secondary_skill: user.secondary_skill || joinSkillPair(secondarySkill1, secondarySkill2),
     secondary_skill_1: secondarySkill1,
     secondary_skill_2: secondarySkill2,
-    special_skill: user.special_skill || "",
+    special_skill: user.special_skill || joinSkillPair(specialSkill1, specialSkill2),
     special_skill_1: specialSkill1,
     special_skill_2: specialSkill2,
     linkedin: user.linkedin || "",
@@ -813,7 +819,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       email: member.email,
       role_id: member.roleId || String(roleOptions.find((role) => role.label === member.role)?.value || 5),
       team_id: member.teamId || teams.find((team) => team.name === member.team)?.id || "",
-      password: "1234",
+      password: "",
       roll_number: member.roll_number || "",
       department: member.department || "",
       position: member.position || "",
@@ -861,6 +867,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           leetcode: memberForm.leetcode,
           activity_points: Number(memberForm.activity_points || 0),
           reward_points: Number(memberForm.reward_points || 0),
+          ...(String(memberForm.password || "").trim() ? { password: memberForm.password } : {}),
         })
         await refreshData()
         setMemberModalOpen(false)
@@ -2801,8 +2808,14 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Temporary Password</Label>
-                <Input className="mb-3 w-full rounded border p-2" type="text" value={memberForm.password} onChange={(event) => setMemberForm((prev) => ({ ...prev, password: event.target.value }))} />
+                <Label>{editingMemberId ? "New Password" : "Temporary Password"}</Label>
+                <Input
+                  className="mb-3 w-full rounded border p-2"
+                  type="password"
+                  placeholder={editingMemberId ? "Leave blank to keep current password" : ""}
+                  value={memberForm.password}
+                  onChange={(event) => setMemberForm((prev) => ({ ...prev, password: event.target.value }))}
+                />
               </div>
             </div>
             <DialogFooter>

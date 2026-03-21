@@ -19,8 +19,14 @@ const userSelectClause = `SELECT
   u.position,
   u.special_lab,
   u.primary_skill,
+  u.primary_skill_1,
+  u.primary_skill_2,
   u.secondary_skill,
+  u.secondary_skill_1,
+  u.secondary_skill_2,
   u.special_skill,
+  u.special_skill_1,
+  u.special_skill_2,
   u.linkedin,
   u.github,
   u.leetcode,
@@ -57,6 +63,26 @@ function normalizeNullableNumber(value, fieldName) {
   }
 
   return { value: normalized };
+}
+
+function splitSkills(raw) {
+  if (!raw) {
+    return [null, null];
+  }
+
+  const [first, second] = String(raw)
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return [first || null, second || null];
+}
+
+function joinSkills(first, second) {
+  return [first, second]
+    .map((value) => (value === undefined || value === null ? "" : String(value).trim()))
+    .filter(Boolean)
+    .join(", ");
 }
 
 async function createUser(req, res) {
@@ -124,22 +150,11 @@ async function createUser(req, res) {
 
     console.log("REQ BODY:", req.body);
 
-    const password_hash = password || "1234";
+    const password_hash = await bcrypt.hash(password || "1234", 10);
     const safeRoleId = role_id || 3;
     const safeTeamId = team_id || null;
     const safeActivityPoints = activity_points ?? 0;
     const safeRewardPoints = reward_points ?? 0;
-
-    const splitSkills = (raw) => {
-      if (!raw) {
-        return [null, null];
-      }
-      const [first, second] = raw
-        .split(",")
-        .map((part) => part.trim())
-        .filter(Boolean);
-      return [first || null, second || null];
-    };
 
     const [parsedPrimary1, parsedPrimary2] = splitSkills(primary_skill);
     const [parsedSecondary1, parsedSecondary2] = splitSkills(secondary_skill);
@@ -151,6 +166,10 @@ async function createUser(req, res) {
     const finalSecondary2 = secondary_skill_2?.trim() || parsedSecondary2 || null;
     const finalSpecial1 = special_skill_1?.trim() || parsedSpecial1 || null;
     const finalSpecial2 = special_skill_2?.trim() || parsedSpecial2 || null;
+
+    const finalPrimary = normalizeNullableString(joinSkills(finalPrimary1, finalPrimary2));
+    const finalSecondary = normalizeNullableString(joinSkills(finalSecondary1, finalSecondary2));
+    const finalSpecial = normalizeNullableString(joinSkills(finalSpecial1, finalSpecial2));
 
     const nextActivityPoints = normalizeNullableNumber(safeActivityPoints, "activity_points");
     const nextRewardPoints = normalizeNullableNumber(safeRewardPoints, "reward_points");
@@ -172,10 +191,13 @@ async function createUser(req, res) {
         department,
         position,
         special_lab,
+        primary_skill,
         primary_skill_1,
         primary_skill_2,
+        secondary_skill,
         secondary_skill_1,
         secondary_skill_2,
+        special_skill,
         special_skill_1,
         special_skill_2,
         linkedin,
@@ -183,7 +205,7 @@ async function createUser(req, res) {
         leetcode,
         activity_points,
         reward_points
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         full_name,
         email,
@@ -194,10 +216,13 @@ async function createUser(req, res) {
         normalizeNullableString(department),
         normalizeNullableString(position),
         normalizeNullableString(special_lab),
+        finalPrimary,
         normalizeNullableString(finalPrimary1),
         normalizeNullableString(finalPrimary2),
+        finalSecondary,
         normalizeNullableString(finalSecondary1),
         normalizeNullableString(finalSecondary2),
+        finalSpecial,
         normalizeNullableString(finalSpecial1),
         normalizeNullableString(finalSpecial2),
         normalizeNullableString(linkedin),
@@ -283,6 +308,7 @@ async function updateUser(req, res) {
     const { id } = req.params;
     const {
       email,
+      password,
       team_id,
       role_id,
       activity_points,
@@ -291,7 +317,20 @@ async function updateUser(req, res) {
       is_active
     } = req.body;
 
-    const [existingUsers] = await db.execute("SELECT id FROM users WHERE id = ?", [id]);
+    const [existingUsers] = await db.execute(
+      `SELECT
+        id,
+        full_name,
+        primary_skill_1,
+        primary_skill_2,
+        secondary_skill_1,
+        secondary_skill_2,
+        special_skill_1,
+        special_skill_2
+      FROM users
+      WHERE id = ?`,
+      [id]
+    );
 
     if (existingUsers.length === 0) {
       return res.status(404).json({ message: "User not found." });
@@ -355,16 +394,7 @@ async function updateUser(req, res) {
       "leetcode"
     ];
 
-    const splitSkills = (raw) => {
-      if (!raw) {
-        return [null, null];
-      }
-      const [first, second] = raw
-        .split(",")
-        .map((part) => part.trim())
-        .filter(Boolean);
-      return [first || null, second || null];
-    };
+    const currentUser = existingUsers[0];
 
     for (const field of stringFields) {
       if (Object.prototype.hasOwnProperty.call(req.body, field)) {
@@ -372,22 +402,52 @@ async function updateUser(req, res) {
       }
     }
 
-    if (Object.prototype.hasOwnProperty.call(req.body, "primary_skill")) {
-      const [p1, p2] = splitSkills(req.body.primary_skill);
-      if (p1 !== null) normalizedPayload.primary_skill_1 = p1;
-      if (p2 !== null) normalizedPayload.primary_skill_2 = p2;
+    const skillGroups = [
+      ["primary_skill", "primary_skill_1", "primary_skill_2"],
+      ["secondary_skill", "secondary_skill_1", "secondary_skill_2"],
+      ["special_skill", "special_skill_1", "special_skill_2"],
+    ];
+
+    for (const [combinedField, firstField, secondField] of skillGroups) {
+      const hasCombined = Object.prototype.hasOwnProperty.call(req.body, combinedField);
+      const hasFirst = Object.prototype.hasOwnProperty.call(req.body, firstField);
+      const hasSecond = Object.prototype.hasOwnProperty.call(req.body, secondField);
+
+      if (!hasCombined && !hasFirst && !hasSecond) {
+        continue;
+      }
+
+      let nextFirst = hasFirst ? normalizeNullableString(req.body[firstField]) : undefined;
+      let nextSecond = hasSecond ? normalizeNullableString(req.body[secondField]) : undefined;
+
+      if (hasCombined) {
+        const [parsedFirst, parsedSecond] = splitSkills(req.body[combinedField]);
+        if (!hasFirst) {
+          nextFirst = parsedFirst;
+        }
+        if (!hasSecond) {
+          nextSecond = parsedSecond;
+        }
+      }
+
+      const finalFirst = nextFirst !== undefined ? nextFirst : currentUser[firstField];
+      const finalSecond = nextSecond !== undefined ? nextSecond : currentUser[secondField];
+
+      if (nextFirst !== undefined) {
+        normalizedPayload[firstField] = nextFirst;
+      }
+      if (nextSecond !== undefined) {
+        normalizedPayload[secondField] = nextSecond;
+      }
+
+      normalizedPayload[combinedField] = normalizeNullableString(joinSkills(finalFirst, finalSecond));
     }
 
-    if (Object.prototype.hasOwnProperty.call(req.body, "secondary_skill")) {
-      const [s1, s2] = splitSkills(req.body.secondary_skill);
-      if (s1 !== null) normalizedPayload.secondary_skill_1 = s1;
-      if (s2 !== null) normalizedPayload.secondary_skill_2 = s2;
-    }
-
-    if (Object.prototype.hasOwnProperty.call(req.body, "special_skill")) {
-      const [sp1, sp2] = splitSkills(req.body.special_skill);
-      if (sp1 !== null) normalizedPayload.special_skill_1 = sp1;
-      if (sp2 !== null) normalizedPayload.special_skill_2 = sp2;
+    if (Object.prototype.hasOwnProperty.call(req.body, "password")) {
+      const normalizedPassword = String(password || "").trim();
+      if (normalizedPassword) {
+        normalizedPayload.password_hash = await bcrypt.hash(normalizedPassword, 10);
+      }
     }
 
     for (const [field, value] of Object.entries(numericFields)) {
