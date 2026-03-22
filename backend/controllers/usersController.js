@@ -86,6 +86,21 @@ function joinSkills(first, second) {
     .join(", ");
 }
 
+function sanitizeDirectoryUserForMember(row, currentUserId) {
+  if (Number(row.id) === Number(currentUserId)) {
+    return row;
+  }
+
+  return {
+    id: row.id,
+    full_name: row.full_name,
+    avatar_initials: row.avatar_initials,
+    role_id: row.role_id,
+    role_key: row.role_key,
+    role_name: row.role_name,
+  };
+}
+
 async function createUser(req, res) {
   try {
     const {
@@ -258,8 +273,8 @@ async function getAllUsers(req, res) {
     const leaderRoles = ["Captain", "Vice Captain", "Manager", "Strategist"];
 
     if (role === "Member") {
-      const [rows] = await db.execute(`${userSelectClause} WHERE u.id = ? AND u.is_active = 1`, [req.user.id]);
-      return res.status(200).json(rows);
+      const [rows] = await db.execute(`${userSelectClause} WHERE u.is_active = 1 ORDER BY u.id ASC`);
+      return res.status(200).json(rows.map((row) => sanitizeDirectoryUserForMember(row, req.user.id)));
     }
 
     if (leaderRoles.includes(role)) {

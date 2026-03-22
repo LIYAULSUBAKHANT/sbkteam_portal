@@ -291,9 +291,9 @@ function normalizeUser(user, taskCount = 0) {
 
   return {
     id: String(user.id),
-    name: user.full_name,
-    email: user.email,
-    role: user.role_name,
+    name: user.full_name || "Unknown user",
+    email: user.email || "",
+    role: user.role_name || "Member",
     roleKey: user.role_key,
     team: user.team_name || "Unassigned",
     points: Number(user.points || 0),
@@ -305,7 +305,7 @@ function normalizeUser(user, taskCount = 0) {
       user.avatar_initials || getInitials(user.full_name),
     joinedAt: user.joined_at,
     teamId: user.team_id ? String(user.team_id) : "",
-    roleId: String(user.role_id),
+    roleId: user.role_id ? String(user.role_id) : "",
     roll_number: user.roll_number || "",
     department: user.department || "",
     position: user.position || "",
