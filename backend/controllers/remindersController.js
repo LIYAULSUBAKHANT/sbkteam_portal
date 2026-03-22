@@ -1,6 +1,7 @@
 const db = require("../db");
 const { logActivity } = require("./activityLogController");
 const { logInsertedTime, serializeRows } = require("../utils/datetime");
+const { emitDataChanged } = require("../socket");
 
 async function getNotificationRecipients(targetType, targetTeamId, targetUserId) {
   if (targetType === "team" && targetTeamId) {
@@ -26,6 +27,10 @@ async function getNotificationRecipients(targetType, targetTeamId, targetUserId)
   return rows.map((row) => row.id);
 }
 
+function buildReminderNotificationMessage(title) {
+  return `Reminder: ${title}`;
+}
+
 async function createNotificationsForReminder(title, targetType, targetTeamId, targetUserId) {
   const recipients = await getNotificationRecipients(targetType, targetTeamId, targetUserId);
 
@@ -33,7 +38,7 @@ async function createNotificationsForReminder(title, targetType, targetTeamId, t
     return;
   }
 
-  const message = `Reminder: ${title}`;
+  const message = buildReminderNotificationMessage(title);
 
   await Promise.all(
     recipients.map((userId) =>
@@ -94,6 +99,9 @@ async function createReminder(req, res) {
       targetLabel: title
     });
 
+    emitDataChanged({ type: "reminder", action: "create", data: { id: result.insertId } });
+    emitDataChanged({ type: "notification", action: "create", data: { source: "reminder", id: result.insertId } });
+
     return res.status(201).json({
       message: "Reminder created successfully.",
       reminderId: result.insertId
@@ -137,6 +145,15 @@ async function updateReminder(req, res) {
       ]
     );
 
+    if (title && title !== rows[0].title) {
+      await db.execute(
+        `UPDATE notifications
+         SET message = ?
+         WHERE type = 'reminder' AND message = ?`,
+        [buildReminderNotificationMessage(title), buildReminderNotificationMessage(rows[0].title)]
+      );
+    }
+
     await logActivity({
       userId: req.user.id,
       action: "updated reminder",
@@ -144,6 +161,9 @@ async function updateReminder(req, res) {
       targetId: Number(id),
       targetLabel: title || rows[0].title
     });
+
+    emitDataChanged({ type: "reminder", action: "update", data: { id: Number(id) } });
+    emitDataChanged({ type: "notification", action: "update", data: { source: "reminder", id: Number(id) } });
 
     return res.status(200).json({ message: "Reminder updated successfully." });
   } catch (error) {
@@ -215,6 +235,12 @@ async function deleteReminder(req, res) {
       return res.status(404).json({ message: "Reminder not found." });
     }
 
+    await db.execute(
+      `DELETE FROM notifications
+       WHERE type = 'reminder' AND message = ?`,
+      [buildReminderNotificationMessage(rows[0].title)]
+    );
+
     await db.execute("DELETE FROM reminders WHERE id = ?", [id]);
 
     await logActivity({
@@ -224,6 +250,9 @@ async function deleteReminder(req, res) {
       targetId: Number(id),
       targetLabel: rows[0].title
     });
+
+    emitDataChanged({ type: "reminder", action: "delete", data: { id: Number(id) } });
+    emitDataChanged({ type: "notification", action: "delete", data: { source: "reminder", id: Number(id) } });
 
     return res.status(200).json({ message: "Reminder deleted successfully." });
   } catch (error) {

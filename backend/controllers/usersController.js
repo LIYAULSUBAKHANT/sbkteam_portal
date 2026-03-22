@@ -1,6 +1,7 @@
 const db = require("../db");
 const bcrypt = require("bcrypt");
 const { logActivity } = require("./activityLogController");
+const { emitDataChanged } = require("../socket");
 
 const userSelectClause = `SELECT
   u.id,
@@ -240,6 +241,8 @@ async function createUser(req, res) {
       targetId: result.insertId,
       targetLabel: full_name
     });
+
+    emitDataChanged({ type: "user", action: "create", data: { id: result.insertId } });
 
     return res.json({ message: "User created successfully" });
   } catch (error) {
@@ -483,6 +486,8 @@ async function updateUser(req, res) {
       targetLabel: normalizedPayload.full_name || `User ${id}`
     });
 
+    emitDataChanged({ type: "user", action: "update", data: { id: Number(id) } });
+
     return res.status(200).json({ message: "User updated successfully." });
   } catch (error) {
     return res.status(500).json({ message: "Failed to update user.", error: error.message });
@@ -542,6 +547,8 @@ async function updateUserPerformance(req, res) {
       targetLabel: existingUsers[0].full_name || `User ${id}`
     });
 
+    emitDataChanged({ type: "user", action: "update", data: { id: Number(id) } });
+
     return res.status(200).json({
       message: "Performance updated successfully.",
       user: updatedRows[0]
@@ -581,6 +588,9 @@ async function deleteUser(req, res) {
       targetId: Number(id),
       targetLabel: rows[0].full_name
     });
+
+    emitDataChanged({ type: "user", action: "delete", data: { id: Number(id) } });
+    emitDataChanged({ type: "team", action: "update", data: { userId: Number(id) } });
 
     return res.status(200).json({ message: "User deleted successfully." });
   } catch (error) {

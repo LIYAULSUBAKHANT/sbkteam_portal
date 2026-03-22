@@ -1,5 +1,6 @@
 const db = require("../db");
 const { logActivity } = require("./activityLogController");
+const { emitDataChanged } = require("../socket");
 
 async function createTeam(req, res) {
   try {
@@ -25,6 +26,8 @@ async function createTeam(req, res) {
       targetId: result.insertId,
       targetLabel: name
     });
+
+    emitDataChanged({ type: "team", action: "create", data: { id: result.insertId } });
 
     return res.status(201).json({
       message: "Team created successfully.",
@@ -60,6 +63,9 @@ async function assignLead(req, res) {
       targetId: Number(id),
       targetLabel: `Team ${id}`
     });
+
+    emitDataChanged({ type: "team", action: "update", data: { id: Number(id) } });
+    emitDataChanged({ type: "user", action: "update", data: { id: Number(lead_user_id) } });
 
     return res.status(200).json({ message: "Team lead assigned successfully." });
   } catch (error) {
@@ -99,6 +105,8 @@ async function updateTeam(req, res) {
       targetId: Number(id),
       targetLabel: name || rows[0].name
     });
+
+    emitDataChanged({ type: "team", action: "update", data: { id: Number(id) } });
 
     return res.status(200).json({ message: "Team updated successfully." });
   } catch (error) {
@@ -180,6 +188,9 @@ async function addMembersToTeam(req, res) {
       targetLabel: teamRows[0].name
     });
 
+    emitDataChanged({ type: "team", action: "update", data: { id: Number(teamId) } });
+    emitDataChanged({ type: "user", action: "update", data: { ids: normalizedMemberIds } });
+
     return res.status(200).json({ message: "Members assigned to team successfully." });
   } catch (error) {
     return res.status(500).json({ message: "Failed to assign members to team.", error: error.message });
@@ -223,6 +234,13 @@ async function deleteTeam(req, res) {
       targetId: Number(id),
       targetLabel: teamRows[0].name
     });
+
+    emitDataChanged({ type: "team", action: "delete", data: { id: Number(id) } });
+    emitDataChanged({ type: "user", action: "update", data: { teamId: Number(id) } });
+    emitDataChanged({ type: "project", action: "delete", data: { teamId: Number(id) } });
+    emitDataChanged({ type: "task", action: "delete", data: { teamId: Number(id) } });
+    emitDataChanged({ type: "announcement", action: "delete", data: { teamId: Number(id) } });
+    emitDataChanged({ type: "reminder", action: "delete", data: { teamId: Number(id) } });
 
     return res.status(200).json({ message: "Team deleted successfully." });
   } catch (error) {

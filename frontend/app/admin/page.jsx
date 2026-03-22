@@ -68,6 +68,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost, apiPut, clearStoredAuth, getStoredAuth } from "@/lib/api"
+import { useAppStore } from "@/lib/app-store"
 import { cn } from "@/lib/utils"
 
 const menuItems = [
@@ -459,16 +460,21 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [taskStatusFilter, setTaskStatusFilter] = useState("All")
-  const [currentUser, setCurrentUser] = useState(null)
-  const [members, setMembers] = useState([])
-  const [teams, setTeams] = useState([])
-  const [projects, setProjects] = useState([])
-  const [tasks, setTasks] = useState([])
-  const [skills, setSkills] = useState([])
-  const [announcements, setAnnouncements] = useState([])
-  const [reminders, setReminders] = useState([])
-  const [notifications, setNotifications] = useState([])
-  const [leaderboard, setLeaderboard] = useState([])
+  const currentUser = useAppStore((state) => state.currentUser)
+  const members = useAppStore((state) => state.users)
+  const teams = useAppStore((state) => state.teams)
+  const projects = useAppStore((state) => state.projects)
+  const tasks = useAppStore((state) => state.tasks)
+  const skills = useAppStore((state) => state.skills)
+  const announcements = useAppStore((state) => state.announcements)
+  const reminders = useAppStore((state) => state.reminders)
+  const notifications = useAppStore((state) => state.notifications)
+  const leaderboard = useAppStore((state) => state.leaderboard)
+  const setTasks = useAppStore((state) => state.setTasks)
+  const setSkills = useAppStore((state) => state.setSkills)
+  const setDashboardData = useAppStore((state) => state.setDashboardData)
+  const refreshToken = useAppStore((state) => state.refreshToken)
+  const resetStore = useAppStore((state) => state.resetStore)
   const [memberModalOpen, setMemberModalOpen] = useState(false)
   const [memberDetailsOpen, setMemberDetailsOpen] = useState(false)
   const [performanceModalOpen, setPerformanceModalOpen] = useState(false)
@@ -583,8 +589,6 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       return String(task.assigned_to_user_id) === String(currentUserRow.id) ? count + 1 : count
     }, 0)
 
-    setCurrentUser(normalizeUser(currentUserRow, currentUserTaskCount))
-
     const taskCounts = tasksRows.reduce((accumulator, task) => {
       const key = String(task.assigned_to_user_id)
       accumulator[key] = (accumulator[key] || 0) + 1
@@ -605,15 +609,18 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       skillRows = skillGroups.flat()
     }
 
-    setMembers(userRows.map((user) => normalizeUser(user, taskCounts[String(user.id)] || 0)))
-    setTeams(teamsRows.map(normalizeTeam))
-    setProjects(projectsRows.map(normalizeProject))
-    setTasks(tasksRows.map(normalizeTask))
-    setSkills(skillRows.map(normalizeSkill))
-    setAnnouncements(sortByCreatedAtDesc(announcementsRows).map(normalizeAnnouncement))
-    setReminders(remindersRows.map(normalizeReminder))
-    setNotifications(sortByCreatedAtDesc(notificationsRows).map(normalizeNotification))
-    setLeaderboard(leaderboardRows.map(normalizeLeaderboardUser))
+    setDashboardData({
+      currentUser: normalizeUser(currentUserRow, currentUserTaskCount),
+      users: userRows.map((user) => normalizeUser(user, taskCounts[String(user.id)] || 0)),
+      teams: teamsRows.map(normalizeTeam),
+      projects: projectsRows.map(normalizeProject),
+      tasks: tasksRows.map(normalizeTask),
+      skills: skillRows.map(normalizeSkill),
+      announcements: sortByCreatedAtDesc(announcementsRows).map(normalizeAnnouncement),
+      reminders: remindersRows.map(normalizeReminder),
+      notifications: sortByCreatedAtDesc(notificationsRows).map(normalizeNotification),
+      leaderboard: leaderboardRows.map(normalizeLeaderboardUser),
+    })
   }
 
   useEffect(() => {
@@ -655,6 +662,35 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       ignore = true
     }
   }, [router])
+
+  useEffect(() => {
+    let ignore = false
+
+    async function syncRealtimeData() {
+      if (!refreshToken) {
+        return
+      }
+
+      try {
+        await refreshData()
+      } catch (error) {
+        if (ignore) return
+        console.error("Failed to sync realtime dashboard data:", error)
+        if (isAuthSessionError(error)) {
+          clearStoredAuth()
+          router.replace("/login")
+          return
+        }
+        setActionError(error.message || "Failed to sync latest changes.")
+      }
+    }
+
+    syncRealtimeData()
+
+    return () => {
+      ignore = true
+    }
+  }, [refreshToken, router])
 
   async function retryLoad() {
     setIsLoading(true)
@@ -738,6 +774,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
 
   function handleLogout() {
     clearStoredAuth()
+    resetStore()
     window.location.href = "/login"
   }
 
@@ -1695,11 +1732,8 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       )
     )
 
-    const canSeeAllMembers = ["captain", "vice captain", "manager", "strategist"].includes(currentUser?.role?.toLowerCase()) || currentUser?.role?.toLowerCase() === "captain"
-
-    const visibleMembers = canSeeAllMembers
-      ? filteredMembers
-      : filteredMembers.filter((member) => member.id === currentUser?.id)
+    const isMemberView = currentUser?.roleKey === "member"
+    const visibleMembers = filteredMembers
 
     return (
       <div className="space-y-6">
@@ -1730,16 +1764,23 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 <tr>
                   <th className="p-4 text-left font-medium text-muted-foreground">Member</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Role</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Team</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Activity Points</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Reward Points</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Tasks</th>
+                  {isMemberView ? (
+                    <th className="p-4 text-left font-medium text-muted-foreground">My Details</th>
+                  ) : (
+                    <>
+                      <th className="p-4 text-left font-medium text-muted-foreground">Team</th>
+                      <th className="p-4 text-left font-medium text-muted-foreground">Activity Points</th>
+                      <th className="p-4 text-left font-medium text-muted-foreground">Reward Points</th>
+                      <th className="p-4 text-left font-medium text-muted-foreground">Tasks</th>
+                    </>
+                  )}
                   <th className="p-4 text-left font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {visibleMembers.map((member) => {
                   const RoleIcon = roleIcons[member.role] || Circle
+                  const isSelf = member.id === currentUser?.id
                   const canUpdateThisPerformance = permissions.canUpdateAnyPerformance || member.id === currentUser?.id
 
                   return (
@@ -1751,7 +1792,9 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                           </Avatar>
                           <div>
                             <p className="font-medium text-foreground">{member.name}</p>
-                            <p className="text-sm text-muted-foreground">{member.email}</p>
+                            {!isMemberView || isSelf ? (
+                              <p className="text-sm text-muted-foreground">{member.email}</p>
+                            ) : null}
                           </div>
                         </div>
                       </td>
@@ -1761,28 +1804,44 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                           {member.role}
                         </Badge>
                       </td>
-                      <td className="p-4 text-foreground">{member.team}</td>
-                      <td className="p-4 text-foreground">{member.activity_points}</td>
-                      <td className="p-4 text-foreground">{member.reward_points}</td>
-                      <td className="p-4 text-foreground">{member.tasks}</td>
+                      {isMemberView ? (
+                        <td className="p-4">
+                          {isSelf ? (
+                            <div className="space-y-1 text-sm">
+                              <p className="text-foreground"><span className="text-muted-foreground">Department:</span> {member.department || "Not set"}</p>
+                              <p className="text-foreground"><span className="text-muted-foreground">Skills:</span> {formatSkillPair(member.primary_skill_1, member.primary_skill_2)}</p>
+                              <p className="text-foreground"><span className="text-muted-foreground">Performance:</span> {member.activity_points} AP / {member.reward_points} RP</p>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">Private details</p>
+                          )}
+                        </td>
+                      ) : (
+                        <>
+                          <td className="p-4 text-foreground">{member.team}</td>
+                          <td className="p-4 text-foreground">{member.activity_points}</td>
+                          <td className="p-4 text-foreground">{member.reward_points}</td>
+                          <td className="p-4 text-foreground">{member.tasks}</td>
+                        </>
+                      )}
                       <td className="p-4">
                         <div className="flex flex-wrap gap-2">
-                          {(permissions.canViewDetails && (member.id === currentUser?.id || ["captain", "vice captain", "manager", "strategist"].includes(currentUser?.role?.toLowerCase()))) ? (
+                          {(permissions.canViewDetails && (isSelf || ["captain", "vice captain", "manager", "strategist"].includes(currentUser?.role?.toLowerCase()))) ? (
                             <Button size="sm" variant="outline" onClick={() => openMemberDetailsModal(member)}>
                               View Details
                             </Button>
                           ) : null}
-                          {permissions.canEditMember ? (
+                          {!isMemberView && permissions.canEditMember ? (
                             <Button size="sm" variant="secondary" onClick={() => openMemberEditModal(member)}>
                               Edit
                             </Button>
                           ) : null}
-                          {permissions.canUpdatePerformance && canUpdateThisPerformance ? (
+                          {permissions.canUpdatePerformance && canUpdateThisPerformance && (!isMemberView || isSelf) ? (
                             <Button size="sm" variant="outline" onClick={() => openPerformanceModal(member)}>
                               Update Performance
                             </Button>
                           ) : null}
-                          {permissions.canDeleteRecords ? (
+                          {!isMemberView && permissions.canDeleteRecords ? (
                             <Button
                               size="sm"
                               variant="destructive"

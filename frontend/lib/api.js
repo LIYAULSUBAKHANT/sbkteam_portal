@@ -19,7 +19,25 @@ function getApiRootUrl() {
   }
 }
 
+function getRealtimeRootUrl() {
+  const normalizedBase = RAW_BASE_URL.replace(/\/+$/, "")
+
+  try {
+    const parsedUrl = new URL(normalizedBase)
+    const apiIndex = parsedUrl.pathname.indexOf("/api")
+
+    parsedUrl.pathname = apiIndex >= 0 ? parsedUrl.pathname.slice(0, apiIndex) : parsedUrl.pathname
+    parsedUrl.search = ""
+    parsedUrl.hash = ""
+
+    return parsedUrl.toString().replace(/\/+$/, "")
+  } catch {
+    return normalizedBase.replace(/\/api(?:\/.*)?$/, "")
+  }
+}
+
 const API_ROOT_URL = getApiRootUrl()
+export const REALTIME_ROOT_URL = getRealtimeRootUrl()
 
 const TOKEN_KEY = "sbk-token"
 const USER_ID_KEY = "userId"

@@ -1,6 +1,7 @@
 const db = require("../db");
 const { logActivity } = require("./activityLogController");
 const { logInsertedTime, serializeRows } = require("../utils/datetime");
+const { emitDataChanged } = require("../socket");
 
 async function createNotification(req, res) {
   try {
@@ -25,6 +26,8 @@ async function createNotification(req, res) {
       targetId: result.insertId,
       targetLabel: message
     });
+
+    emitDataChanged({ type: "notification", action: "create", data: { id: result.insertId, userId: Number(user_id) } });
 
     return res.status(201).json({
       message: "Notification created successfully.",
@@ -73,6 +76,8 @@ async function markNotificationAsRead(req, res) {
       targetId: Number(id),
       targetLabel: `Notification ${id}`
     });
+
+    emitDataChanged({ type: "notification", action: "update", data: { id: Number(id), userId: req.user.id } });
 
     return res.status(200).json({ message: "Notification marked as read." });
   } catch (error) {

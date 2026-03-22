@@ -1,5 +1,6 @@
 const db = require("../db");
 const { logActivity } = require("./activityLogController");
+const { emitDataChanged } = require("../socket");
 
 async function createProject(req, res) {
   try {
@@ -30,6 +31,8 @@ async function createProject(req, res) {
       targetId: result.insertId,
       targetLabel: name
     });
+
+    emitDataChanged({ type: "project", action: "create", data: { id: result.insertId } });
 
     return res.status(201).json({
       message: "Project created successfully.",
@@ -152,6 +155,8 @@ async function updateProject(req, res) {
       targetLabel: name || projectRows[0].name
     });
 
+    emitDataChanged({ type: "project", action: "update", data: { id: Number(id) } });
+
     return res.status(200).json({ message: "Project updated successfully." });
   } catch (error) {
     return res.status(500).json({ message: "Failed to update project.", error: error.message });
@@ -184,6 +189,8 @@ async function deleteProject(req, res) {
       targetId: Number(id),
       targetLabel: projectRows[0].name
     });
+
+    emitDataChanged({ type: "project", action: "delete", data: { id: Number(id) } });
 
     return res.status(200).json({ message: "Project deleted successfully." });
   } catch (error) {

@@ -1,5 +1,6 @@
 const db = require("../db");
 const { logActivity } = require("./activityLogController");
+const { emitDataChanged } = require("../socket");
 
 function canEditSkillAssignment(roleKey) {
   return roleKey === "captain" || roleKey === "strategist";
@@ -47,6 +48,8 @@ async function assignSkill(req, res) {
       targetId: result.insertId,
       targetLabel: skill_name
     });
+
+    emitDataChanged({ type: "skill", action: "create", data: { id: result.insertId, userId: Number(user_id) } });
 
     return res.status(201).json({
       message: "Skill assigned successfully.",
@@ -110,6 +113,8 @@ async function updateSkill(req, res) {
       targetLabel: normalizedPayload.skill_name || rows[0].skill_name
     });
 
+    emitDataChanged({ type: "skill", action: "update", data: { id: Number(id) } });
+
     return res.status(200).json({ message: "Skill updated successfully." });
   } catch (error) {
     return res.status(500).json({ message: "Failed to update skill.", error: error.message });
@@ -156,6 +161,8 @@ async function updateSkillStatus(req, res) {
       targetLabel: assignment.skill_name
     });
 
+    emitDataChanged({ type: "skill", action: "update", data: { id: Number(id) } });
+
     return res.status(200).json({ message: "Skill status updated successfully." });
   } catch (error) {
     return res.status(500).json({ message: "Failed to update skill status.", error: error.message });
@@ -188,6 +195,8 @@ async function deleteSkill(req, res) {
       targetId: Number(id),
       targetLabel: rows[0].skill_name
     });
+
+    emitDataChanged({ type: "skill", action: "delete", data: { id: Number(id) } });
 
     return res.status(200).json({ message: "Skill deleted successfully." });
   } catch (error) {

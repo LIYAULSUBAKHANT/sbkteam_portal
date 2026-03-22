@@ -1,5 +1,6 @@
 const path = require("path");
 const dotenv = require("dotenv");
+const http = require("http");
 
 dotenv.config({ path: path.join(__dirname, ".env") });
 
@@ -17,8 +18,10 @@ const remindersRoutes = require("./routes/remindersRoutes");
 const notificationsRoutes = require("./routes/notificationsRoutes");
 const activityLogsRoutes = require("./routes/activityLogsRoutes");
 const { authenticateToken } = require("./middleware/authMiddleware");
+const { initSocket } = require("./socket");
 
 const app = express();
+const server = http.createServer(app);
 
 app.use(cors({ origin: "*" }));
 app.use(express.json());
@@ -62,7 +65,9 @@ app.use((error, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, async () => {
+initSocket(server);
+
+server.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
 
   try {

@@ -1,5 +1,6 @@
 const db = require("../db");
 const { logActivity } = require("./activityLogController");
+const { emitDataChanged } = require("../socket");
 
 async function createTask(req, res) {
   try {
@@ -39,6 +40,8 @@ async function createTask(req, res) {
       targetId: result.insertId,
       targetLabel: title
     });
+
+    emitDataChanged({ type: "task", action: "create", data: { id: result.insertId } });
 
     return res.status(201).json({
       message: "Task created successfully.",
@@ -128,6 +131,8 @@ async function updateTaskStatus(req, res) {
       targetLabel: task.title
     });
 
+    emitDataChanged({ type: "task", action: "update", data: { id: Number(id) } });
+
     return res.status(200).json({ message: "Task status updated successfully." });
   } catch (error) {
     return res.status(500).json({ message: "Failed to update task status.", error: error.message });
@@ -178,6 +183,8 @@ async function updateTask(req, res) {
       targetLabel: title || rows[0].title
     });
 
+    emitDataChanged({ type: "task", action: "update", data: { id: Number(id) } });
+
     return res.status(200).json({ message: "Task updated successfully." });
   } catch (error) {
     return res.status(500).json({ message: "Failed to update task.", error: error.message });
@@ -202,6 +209,8 @@ async function deleteTask(req, res) {
       targetId: Number(id),
       targetLabel: rows[0].title
     });
+
+    emitDataChanged({ type: "task", action: "delete", data: { id: Number(id) } });
 
     return res.status(200).json({ message: "Task deleted successfully." });
   } catch (error) {

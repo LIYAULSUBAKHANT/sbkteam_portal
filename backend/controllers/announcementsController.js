@@ -1,6 +1,7 @@
 const db = require("../db");
 const { logActivity } = require("./activityLogController");
 const { logInsertedTime, serializeRows } = require("../utils/datetime");
+const { emitDataChanged } = require("../socket");
 
 async function getNotificationRecipients(targetType, targetTeamId, targetUserId) {
   if (targetType === "team" && targetTeamId) {
@@ -26,6 +27,10 @@ async function getNotificationRecipients(targetType, targetTeamId, targetUserId)
   return rows.map((row) => row.id);
 }
 
+function buildAnnouncementNotificationMessage(title) {
+  return `New announcement: ${title}`;
+}
+
 async function createNotificationsForAnnouncement(title, targetType, targetTeamId, targetUserId) {
   const recipients = await getNotificationRecipients(targetType, targetTeamId, targetUserId);
 
@@ -33,7 +38,7 @@ async function createNotificationsForAnnouncement(title, targetType, targetTeamI
     return;
   }
 
-  const message = `New announcement: ${title}`;
+  const message = buildAnnouncementNotificationMessage(title);
 
   await Promise.all(
     recipients.map((userId) =>
@@ -92,6 +97,9 @@ async function createAnnouncement(req, res) {
       targetLabel: title
     });
 
+    emitDataChanged({ type: "announcement", action: "create", data: { id: result.insertId } });
+    emitDataChanged({ type: "notification", action: "create", data: { source: "announcement", id: result.insertId } });
+
     return res.status(201).json({
       message: "Announcement created successfully.",
       announcementId: result.insertId
@@ -133,6 +141,15 @@ async function updateAnnouncement(req, res) {
       ]
     );
 
+    if (title && title !== rows[0].title) {
+      await db.execute(
+        `UPDATE notifications
+         SET message = ?
+         WHERE type = 'announcement' AND message = ?`,
+        [buildAnnouncementNotificationMessage(title), buildAnnouncementNotificationMessage(rows[0].title)]
+      );
+    }
+
     await logActivity({
       userId: req.user.id,
       action: "updated announcement",
@@ -140,6 +157,9 @@ async function updateAnnouncement(req, res) {
       targetId: Number(id),
       targetLabel: title || rows[0].title
     });
+
+    emitDataChanged({ type: "announcement", action: "update", data: { id: Number(id) } });
+    emitDataChanged({ type: "notification", action: "update", data: { source: "announcement", id: Number(id) } });
 
     return res.status(200).json({ message: "Announcement updated successfully." });
   } catch (error) {
@@ -209,6 +229,12 @@ async function deleteAnnouncement(req, res) {
       return res.status(404).json({ message: "Announcement not found." });
     }
 
+    await db.execute(
+      `DELETE FROM notifications
+       WHERE type = 'announcement' AND message = ?`,
+      [buildAnnouncementNotificationMessage(rows[0].title)]
+    );
+
     await db.execute("DELETE FROM announcements WHERE id = ?", [id]);
 
     await logActivity({
@@ -218,6 +244,9 @@ async function deleteAnnouncement(req, res) {
       targetId: Number(id),
       targetLabel: rows[0].title
     });
+
+    emitDataChanged({ type: "announcement", action: "delete", data: { id: Number(id) } });
+    emitDataChanged({ type: "notification", action: "delete", data: { source: "announcement", id: Number(id) } });
 
     return res.status(200).json({ message: "Announcement deleted successfully." });
   } catch (error) {
