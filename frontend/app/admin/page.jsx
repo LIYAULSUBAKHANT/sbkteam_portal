@@ -545,6 +545,20 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     target_user_id: "",
   })
 
+  useEffect(() => {
+    if (!actionMessage) {
+      return undefined
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setActionMessage("")
+    }, 3000)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [actionMessage])
+
   async function loadWithFallback(request, fallbackValue, label, required = false) {
     try {
       return await request()
