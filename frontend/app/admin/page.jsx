@@ -1565,7 +1565,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   <span className="font-medium text-foreground">{stats.activeProjects}</span>
                 </div>
               </div>
-              {permissions.canEditMember ? (
+              {(permissions.canEditMember || currentUser?.roleKey === "member") ? (
                 <Button variant="outline" className="w-full" onClick={() => openPerformanceModal(currentUser)}>
                   Update Performance
                 </Button>
@@ -1795,7 +1795,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 {visibleMembers.map((member) => {
                   const RoleIcon = roleIcons[member.role] || Circle
                   const isSelf = member.id === currentUser?.id
-                  const canUpdateThisPerformance = permissions.canUpdateAnyPerformance || member.id === currentUser?.id
+                  const canUpdateThisPerformance = permissions.canUpdateAnyPerformance || isSelf
 
                   return (
                     <tr key={member.id} className="transition-colors hover:bg-muted/30">
@@ -1850,7 +1850,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                               Edit
                             </Button>
                           ) : null}
-                          {permissions.canUpdatePerformance && canUpdateThisPerformance && (!isMemberView || isSelf) ? (
+                          {!isMemberView && permissions.canUpdatePerformance && canUpdateThisPerformance ? (
                             <Button size="sm" variant="outline" onClick={() => openPerformanceModal(member)}>
                               Update Performance
                             </Button>
