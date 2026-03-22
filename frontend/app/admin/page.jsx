@@ -1778,9 +1778,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 <tr>
                   <th className="p-4 text-left font-medium text-muted-foreground">Member</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Role</th>
-                  {isMemberView ? (
-                    <th className="p-4 text-left font-medium text-muted-foreground">My Details</th>
-                  ) : (
+                  {isMemberView ? null : (
                     <>
                       <th className="p-4 text-left font-medium text-muted-foreground">Team</th>
                       <th className="p-4 text-left font-medium text-muted-foreground">Activity Points</th>
@@ -1818,19 +1816,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                           {member.role}
                         </Badge>
                       </td>
-                      {isMemberView ? (
-                        <td className="p-4">
-                          {isSelf ? (
-                            <div className="space-y-1 text-sm">
-                              <p className="text-foreground"><span className="text-muted-foreground">Department:</span> {member.department || "Not set"}</p>
-                              <p className="text-foreground"><span className="text-muted-foreground">Skills:</span> {formatSkillPair(member.primary_skill_1, member.primary_skill_2)}</p>
-                              <p className="text-foreground"><span className="text-muted-foreground">Performance:</span> {member.activity_points} AP / {member.reward_points} RP</p>
-                            </div>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">Private details</p>
-                          )}
-                        </td>
-                      ) : (
+                      {isMemberView ? null : (
                         <>
                           <td className="p-4 text-foreground">{member.team}</td>
                           <td className="p-4 text-foreground">{member.activity_points}</td>
