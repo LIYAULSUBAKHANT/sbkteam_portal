@@ -272,6 +272,41 @@ function getInitials(name) {
   )
 }
 
+function extractBatchYearFromIdentity(email, rollNumber) {
+  const candidates = [email, rollNumber]
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter(Boolean)
+
+  for (const candidate of candidates) {
+    const localPart = candidate.includes("@") ? candidate.split("@")[0] : candidate
+    const match = localPart.match(/([a-z]+)(\d{2})(?!.*\d)/)
+
+    if (match) {
+      return Number(match[2])
+    }
+  }
+
+  return null
+}
+
+function getCohortFromIdentity(email, rollNumber) {
+  const batchYear = extractBatchYearFromIdentity(email, rollNumber)
+
+  if (batchYear === 24) return "senior"
+  if (batchYear === 25) return "junior"
+  return "all"
+}
+
+function sortLeaderboardByActivity(items) {
+  return [...items].sort((left, right) => {
+    if (right.activity_points !== left.activity_points) {
+      return right.activity_points - left.activity_points
+    }
+
+    return left.name.localeCompare(right.name)
+  })
+}
+
 function buildTargetLabel(item) {
   if (item.target_type === "team") return item.target_team_name || "Team"
   if (item.target_type === "user") return item.target_user_name || "User"
@@ -329,6 +364,7 @@ function normalizeLeaderboardUser(user) {
   return {
     id: String(user.id),
     name: user.full_name,
+    email: user.email || "",
     activity_points: Number(user.activity_points || 0),
     teamId: user.team_id ? String(user.team_id) : "",
     team: user.team_name || "Unassigned",
@@ -748,10 +784,21 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     () => skills.filter((skill) => skill.userId === currentUser?.id),
     [currentUser?.id, skills]
   )
+  const currentUserCohort = useMemo(
+    () => getCohortFromIdentity(currentUser?.email, currentUser?.roll_number),
+    [currentUser?.email, currentUser?.roll_number]
+  )
+  const visibleLeaderboard = useMemo(() => {
+    if (!isMember || currentUserCohort === "all") {
+      return leaderboard
+    }
+
+    return leaderboard.filter((member) => getCohortFromIdentity(member.email, member.roll_number) === currentUserCohort)
+  }, [currentUserCohort, isMember, leaderboard])
   const stats = useMemo(() => {
     const completedSkills = visibleSkills.filter((skill) => skill.status === "Completed").length
     const totalSkills = visibleSkills.length
-    const topPerformer = [...leaderboard].sort((a, b) => b.activity_points - a.activity_points)[0] || null
+    const topPerformer = sortLeaderboardByActivity(visibleLeaderboard)[0] || null
 
     return {
       totalMembers: members.length,
@@ -763,7 +810,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       completionRate: totalSkills ? Math.round((completedSkills / totalSkills) * 100) : 0,
       topPerformer,
     }
-  }, [leaderboard, members, projects, visibleSkills, visibleTasks])
+  }, [members, projects, visibleLeaderboard, visibleSkills, visibleTasks])
   const unreadNotifications = notifications.filter((notification) => !notification.read).length
 
   async function handleTaskStatusChange(taskId, status) {
@@ -2313,35 +2360,41 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     const userSkills = skills.filter((skill) => skill.userId === currentUser?.id)
     const completedUserSkills = userSkills.filter((skill) => skill.status === "Completed").length
     const skillProgress = userSkills.length ? Math.round((completedUserSkills / userSkills.length) * 100) : 0
-    const teamMembers = leaderboard.filter((member) => member.teamId === currentUser?.teamId)
-    const comparisonPool = teamMembers.length > 0 ? teamMembers : leaderboard
-    const teamAverageActivity = comparisonPool.length
+    const currentUserCohort = getCohortFromIdentity(currentUser?.email, currentUser?.roll_number)
+    const comparisonPool = currentUserCohort === "all"
+      ? leaderboard
+      : leaderboard.filter((member) => getCohortFromIdentity(member.email, member.roll_number) === currentUserCohort)
+    const rankedPool = sortLeaderboardByActivity(comparisonPool)
+    const cohortAverageActivity = rankedPool.length
       ? Math.round(comparisonPool.reduce((sum, member) => sum + member.activity_points, 0) / comparisonPool.length)
       : 0
-    const topMembers = [...leaderboard].sort((a, b) => b.activity_points - a.activity_points).slice(0, 5)
-    const currentRank = [...leaderboard].sort((a, b) => b.activity_points - a.activity_points).findIndex((member) => member.id === currentUser?.id) + 1
+    const topMembers = rankedPool.slice(0, 5)
+    const currentRank = rankedPool.findIndex((member) => member.id === currentUser?.id) + 1
     const maxPoints = topMembers[0]?.activity_points || 1
-    const nextRankMember = currentRank > 1 ? leaderboard[currentRank - 2] : null
+    const nextRankMember = currentRank > 1 ? rankedPool[currentRank - 2] : null
     const pointsToNextRank = nextRankMember
       ? Math.max((nextRankMember.activity_points || 0) - (currentUser?.activity_points || 0), 0)
       : 0
+    const cohortLabel = currentUserCohort === "senior" ? "senior" : currentUserCohort === "junior" ? "junior" : "overall"
     const insightMessages = [
       currentRank > 0
-        ? `Top ${currentRank} performer based on activity points.`
+        ? `Rank ${currentRank} inside the ${cohortLabel} performance group.`
         : "Ranking will appear once leaderboard data is available.",
       pointsToNextRank > 0
         ? `Improve activity by ${pointsToNextRank} point${pointsToNextRank === 1 ? "" : "s"} to reach the next rank.`
         : "You are already at the top of the activity ranking.",
-      (currentUser?.activity_points || 0) >= teamAverageActivity
-        ? "You are performing above the team activity average."
-        : `You are ${teamAverageActivity - (currentUser?.activity_points || 0)} point${teamAverageActivity - (currentUser?.activity_points || 0) === 1 ? "" : "s"} below the team activity average.`,
+      (currentUser?.activity_points || 0) >= cohortAverageActivity
+        ? `You are performing above the ${cohortLabel} activity average.`
+        : `You are ${cohortAverageActivity - (currentUser?.activity_points || 0)} point${cohortAverageActivity - (currentUser?.activity_points || 0) === 1 ? "" : "s"} below the ${cohortLabel} activity average.`,
     ]
 
     return (
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Performance</h2>
-          <p className="text-muted-foreground">Insight-driven view of your scores, progress, and contribution standing.</p>
+          <p className="text-muted-foreground">
+            Insight-driven view of your scores, progress, and contribution standing within the {cohortLabel} group.
+          </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -2411,11 +2464,11 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   <span className="font-medium text-foreground">{currentUser?.activity_points || 0}</span>
                 </div>
                 <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Team Average</span>
-                  <span className="font-medium text-foreground">{teamAverageActivity}</span>
+                  <span className="text-muted-foreground">{cohortLabel === "overall" ? "Average" : `${cohortLabel[0].toUpperCase()}${cohortLabel.slice(1)} Average`}</span>
+                  <span className="font-medium text-foreground">{cohortAverageActivity}</span>
                 </div>
                 <Progress
-                  value={teamAverageActivity ? Math.min(((currentUser?.activity_points || 0) / teamAverageActivity) * 100, 100) : 0}
+                  value={cohortAverageActivity ? Math.min(((currentUser?.activity_points || 0) / cohortAverageActivity) * 100, 100) : 0}
                   className="h-2"
                 />
               </div>
@@ -2451,7 +2504,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           <Card className="border border-border shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-semibold text-foreground">Top Contributors</CardTitle>
-              <CardDescription>Top 5 ranked only by activity points</CardDescription>
+              <CardDescription>Top 5 ranked by activity points inside the {cohortLabel} group</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {topMembers.map((member, index) => (

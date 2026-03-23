@@ -619,6 +619,7 @@ async function getLeaderboard(req, res) {
       `SELECT
         u.id,
         u.full_name,
+        u.email,
         u.activity_points,
         u.team_id,
         t.name AS team_name
