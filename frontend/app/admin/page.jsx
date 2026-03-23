@@ -254,7 +254,7 @@ function getPermissions(role) {
     canEditAssignedSkills: isCaptain || isStrategist,
     canDeleteAssignedSkills: isCaptain,
     canCreateAnnouncement: isCaptain || isLeader,
-    canViewLeaderboard: isCaptain || isLeader,
+    canViewLeaderboard: true,
     canViewAnalytics: isCaptain || isLeader,
     canSyncPoints: isCaptain || isLeader,
   }
@@ -270,6 +270,55 @@ function getInitials(name) {
       .slice(0, 2)
       .toUpperCase() || "--"
   )
+}
+
+function extractBatchYear(rollNumber, email) {
+  const candidates = [rollNumber, email]
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter(Boolean)
+
+  for (const candidate of candidates) {
+    const localPart = candidate.includes("@") ? candidate.split("@")[0] : candidate
+    const matches = [...localPart.matchAll(/(\d{2,4})/g)]
+
+    for (let index = matches.length - 1; index >= 0; index -= 1) {
+      const rawValue = matches[index]?.[1]
+
+      if (!rawValue) {
+        continue
+      }
+
+      const batchYear = Number(rawValue.slice(-2))
+
+      if (Number.isInteger(batchYear)) {
+        return batchYear
+      }
+    }
+  }
+
+  return null
+}
+
+function getCohortKey(batchYear) {
+  if (batchYear === 24) return "senior"
+  if (batchYear === 25) return "junior"
+  return "unclassified"
+}
+
+function getCohortLabel(cohortKey) {
+  if (cohortKey === "junior") return "Juniors"
+  if (cohortKey === "senior") return "Seniors"
+  return "Unclassified"
+}
+
+function sortLeaderboardEntries(items) {
+  return [...items].sort((left, right) => {
+    if (right.activity_points !== left.activity_points) {
+      return right.activity_points - left.activity_points
+    }
+
+    return left.name.localeCompare(right.name)
+  })
 }
 
 function buildTargetLabel(item) {
@@ -330,6 +379,7 @@ function normalizeLeaderboardUser(user) {
     id: String(user.id),
     name: user.full_name,
     activity_points: Number(user.activity_points || 0),
+    roll_number: user.roll_number || "",
     teamId: user.team_id ? String(user.team_id) : "",
     team: user.team_name || "Unassigned",
     avatar: getInitials(user.full_name),
@@ -748,10 +798,51 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     () => skills.filter((skill) => skill.userId === currentUser?.id),
     [currentUser?.id, skills]
   )
+  const currentUserBatchYear = useMemo(
+    () => extractBatchYear(currentUser?.roll_number, currentUser?.email),
+    [currentUser?.email, currentUser?.roll_number]
+  )
+  const currentUserCohortKey = useMemo(
+    () => getCohortKey(currentUserBatchYear),
+    [currentUserBatchYear]
+  )
+  const leaderboardWithCohorts = useMemo(
+    () =>
+      leaderboard.map((member) => {
+        const batchYear = extractBatchYear(member.roll_number, member.email)
+
+        return {
+          ...member,
+          batchYear,
+          cohortKey: getCohortKey(batchYear),
+        }
+      }),
+    [leaderboard]
+  )
+  const visibleLeaderboard = useMemo(() => {
+    if (isMember) {
+      return leaderboardWithCohorts.filter((member) => member.cohortKey === currentUserCohortKey)
+    }
+
+    return leaderboardWithCohorts
+  }, [currentUserCohortKey, isMember, leaderboardWithCohorts])
+  const performanceMembers = useMemo(
+    () =>
+      members.map((member) => {
+        const batchYear = extractBatchYear(member.roll_number, member.email)
+
+        return {
+          ...member,
+          batchYear,
+          cohortKey: getCohortKey(batchYear),
+        }
+      }),
+    [members]
+  )
   const stats = useMemo(() => {
     const completedSkills = visibleSkills.filter((skill) => skill.status === "Completed").length
     const totalSkills = visibleSkills.length
-    const topPerformer = [...leaderboard].sort((a, b) => b.activity_points - a.activity_points)[0] || null
+    const topPerformer = sortLeaderboardEntries(visibleLeaderboard)[0] || null
 
     return {
       totalMembers: members.length,
@@ -763,7 +854,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       completionRate: totalSkills ? Math.round((completedSkills / totalSkills) * 100) : 0,
       topPerformer,
     }
-  }, [leaderboard, members, projects, visibleSkills, visibleTasks])
+  }, [members, projects, visibleLeaderboard, visibleSkills, visibleTasks])
   const unreadNotifications = notifications.filter((notification) => !notification.read).length
 
   async function handleTaskStatusChange(taskId, status) {
@@ -2237,22 +2328,32 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       )
     }
 
-    const rankedMembers = [...leaderboard].sort((a, b) => b.activity_points - a.activity_points)
+    const cohortSections = isMember
+      ? [
+          {
+            key: currentUserCohortKey,
+            title: `${getCohortLabel(currentUserCohortKey)} Leaderboard`,
+            description: `Competition is shown only against ${getCohortLabel(currentUserCohortKey).toLowerCase()}.`,
+            members: sortLeaderboardEntries(visibleLeaderboard),
+          },
+        ]
+      : ["senior", "junior", "unclassified"].map((cohortKey) => ({
+          key: cohortKey,
+          title: `${getCohortLabel(cohortKey)} Leaderboard`,
+          description: `Ranked by activity points for ${getCohortLabel(cohortKey).toLowerCase()}.`,
+          members: sortLeaderboardEntries(visibleLeaderboard.filter((member) => member.cohortKey === cohortKey)),
+        }))
 
-    return (
-      <div className="space-y-6">
-        {renderBanner(actionMessage, "success")}
-        {renderBanner(actionError)}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Leaderboard</h2>
-            <p className="text-muted-foreground">Ranked by activity points from the backend</p>
-          </div>
-        </div>
+    function renderLeaderboardTable(section) {
+      if (section.members.length === 0) {
+        return null
+      }
 
-        <Card className="border border-border shadow-sm">
+      return (
+        <Card key={section.key} className="border border-border shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold text-foreground">Full Rankings</CardTitle>
+            <CardTitle className="text-lg font-semibold text-foreground">{section.title}</CardTitle>
+            <CardDescription>{section.description}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -2265,7 +2366,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {rankedMembers.map((member, index) => (
+                  {section.members.map((member, index) => (
                     <tr
                       key={member.id}
                       className={cn(
@@ -2290,6 +2391,22 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
             </div>
           </CardContent>
         </Card>
+      )
+    }
+
+    return (
+      <div className="space-y-6">
+        {renderBanner(actionMessage, "success")}
+        {renderBanner(actionError)}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Leaderboard</h2>
+            <p className="text-muted-foreground">
+              {isMember ? "Only your senior or junior competition is shown here." : "Leaderboard is split into senior and junior groups."}
+            </p>
+          </div>
+        </div>
+        {cohortSections.map(renderLeaderboardTable)}
       </div>
     )
   }
@@ -2313,35 +2430,110 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     const userSkills = skills.filter((skill) => skill.userId === currentUser?.id)
     const completedUserSkills = userSkills.filter((skill) => skill.status === "Completed").length
     const skillProgress = userSkills.length ? Math.round((completedUserSkills / userSkills.length) * 100) : 0
-    const teamMembers = leaderboard.filter((member) => member.teamId === currentUser?.teamId)
-    const comparisonPool = teamMembers.length > 0 ? teamMembers : leaderboard
+    const comparisonPool = visibleLeaderboard
     const teamAverageActivity = comparisonPool.length
       ? Math.round(comparisonPool.reduce((sum, member) => sum + member.activity_points, 0) / comparisonPool.length)
       : 0
-    const topMembers = [...leaderboard].sort((a, b) => b.activity_points - a.activity_points).slice(0, 5)
-    const currentRank = [...leaderboard].sort((a, b) => b.activity_points - a.activity_points).findIndex((member) => member.id === currentUser?.id) + 1
+    const rankedComparisonPool = sortLeaderboardEntries(comparisonPool)
+    const topMembers = rankedComparisonPool.slice(0, 5)
+    const currentRank = rankedComparisonPool.findIndex((member) => member.id === currentUser?.id) + 1
     const maxPoints = topMembers[0]?.activity_points || 1
-    const nextRankMember = currentRank > 1 ? leaderboard[currentRank - 2] : null
+    const nextRankMember = currentRank > 1 ? rankedComparisonPool[currentRank - 2] : null
     const pointsToNextRank = nextRankMember
       ? Math.max((nextRankMember.activity_points || 0) - (currentUser?.activity_points || 0), 0)
       : 0
+    const performanceSections = ["senior", "junior", "unclassified"]
+      .map((cohortKey) => {
+        const sectionMembers = performanceMembers
+          .filter((member) => member.cohortKey === cohortKey)
+          .sort((left, right) => {
+            if (right.activity_points !== left.activity_points) {
+              return right.activity_points - left.activity_points
+            }
+
+            return left.name.localeCompare(right.name)
+          })
+
+        if (sectionMembers.length === 0) {
+          return null
+        }
+
+        return {
+          key: cohortKey,
+          title: `${getCohortLabel(cohortKey)} Performance`,
+          members: sectionMembers,
+          averageActivity: Math.round(
+            sectionMembers.reduce((sum, member) => sum + Number(member.activity_points || 0), 0) / sectionMembers.length
+          ),
+          topPerformer: sectionMembers[0],
+        }
+      })
+      .filter(Boolean)
     const insightMessages = [
       currentRank > 0
-        ? `Top ${currentRank} performer based on activity points.`
+        ? `Rank ${currentRank} within the ${getCohortLabel(currentUserCohortKey).toLowerCase()} activity leaderboard.`
         : "Ranking will appear once leaderboard data is available.",
       pointsToNextRank > 0
         ? `Improve activity by ${pointsToNextRank} point${pointsToNextRank === 1 ? "" : "s"} to reach the next rank.`
         : "You are already at the top of the activity ranking.",
       (currentUser?.activity_points || 0) >= teamAverageActivity
-        ? "You are performing above the team activity average."
-        : `You are ${teamAverageActivity - (currentUser?.activity_points || 0)} point${teamAverageActivity - (currentUser?.activity_points || 0) === 1 ? "" : "s"} below the team activity average.`,
+        ? `You are performing above the ${getCohortLabel(currentUserCohortKey).toLowerCase()} activity average.`
+        : `You are ${teamAverageActivity - (currentUser?.activity_points || 0)} point${teamAverageActivity - (currentUser?.activity_points || 0) === 1 ? "" : "s"} below the ${getCohortLabel(currentUserCohortKey).toLowerCase()} activity average.`,
     ]
+
+    if (!isMember) {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Performance</h2>
+            <p className="text-muted-foreground">Performance metrics are split into senior and junior groups.</p>
+          </div>
+
+          {performanceSections.map((section) => (
+            <Card key={section.key} className="border border-border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold text-foreground">{section.title}</CardTitle>
+                <CardDescription>
+                  {section.members.length} members • Avg activity {section.averageActivity} • Top performer {section.topPerformer?.name || "N/A"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="p-4 text-left font-medium text-muted-foreground">Name</th>
+                        <th className="p-4 text-left font-medium text-muted-foreground">Activity Points</th>
+                        <th className="p-4 text-left font-medium text-muted-foreground">Reward Points</th>
+                        <th className="p-4 text-left font-medium text-muted-foreground">CGPA</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {section.members.map((member) => (
+                        <tr key={member.id} className={cn("transition-colors hover:bg-muted/30", member.id === currentUser?.id && "bg-primary/5")}>
+                          <td className="p-4 font-medium text-foreground">{member.name}</td>
+                          <td className="p-4 text-foreground">{member.activity_points}</td>
+                          <td className="p-4 text-foreground">{member.reward_points}</td>
+                          <td className="p-4 text-foreground">{member.cgpa}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )
+    }
 
     return (
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Performance</h2>
-          <p className="text-muted-foreground">Insight-driven view of your scores, progress, and contribution standing.</p>
+          <p className="text-muted-foreground">
+            Insight-driven view of your scores, progress, and standing within the {getCohortLabel(currentUserCohortKey).toLowerCase()} group.
+          </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -2411,7 +2603,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   <span className="font-medium text-foreground">{currentUser?.activity_points || 0}</span>
                 </div>
                 <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Team Average</span>
+                  <span className="text-muted-foreground">{getCohortLabel(currentUserCohortKey)} Average</span>
                   <span className="font-medium text-foreground">{teamAverageActivity}</span>
                 </div>
                 <Progress
@@ -2451,7 +2643,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           <Card className="border border-border shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-semibold text-foreground">Top Contributors</CardTitle>
-              <CardDescription>Top 5 ranked only by activity points</CardDescription>
+              <CardDescription>Top 5 in your {getCohortLabel(currentUserCohortKey).toLowerCase()} group by activity points</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {topMembers.map((member, index) => (
