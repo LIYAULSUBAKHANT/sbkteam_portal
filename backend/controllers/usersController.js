@@ -620,7 +620,6 @@ async function getLeaderboard(req, res) {
         u.id,
         u.full_name,
         u.activity_points,
-        u.roll_number,
         u.team_id,
         t.name AS team_name
       FROM users u
