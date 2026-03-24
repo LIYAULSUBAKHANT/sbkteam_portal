@@ -4,48 +4,76 @@ const { emitDataChanged } = require("../socket");
 
 async function createTask(req, res) {
   try {
-    const { project_id, assigned_to_user_id, title, description, status, priority, due_date } = req.body;
+    const { project_id, assigned_to_user_id, member_ids, title, description, status, priority, due_date } = req.body;
+    const normalizedMemberIds = Array.isArray(member_ids)
+      ? [...new Set(member_ids.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0))]
+      : [];
+    const fallbackAssigneeId = Number(assigned_to_user_id);
+    const assigneeIds = normalizedMemberIds.length > 0
+      ? normalizedMemberIds
+      : (Number.isInteger(fallbackAssigneeId) && fallbackAssigneeId > 0 ? [fallbackAssigneeId] : []);
 
-    if (!project_id || !assigned_to_user_id || !title) {
-      return res.status(400).json({ message: "project_id, assigned_to_user_id, and title are required." });
+    if (!project_id || assigneeIds.length === 0 || !title) {
+      return res.status(400).json({ message: "project_id, title, and at least one assignee are required." });
     }
 
-    const [result] = await db.execute(
-      `INSERT INTO tasks (
-        project_id,
-        assigned_to_user_id,
-        created_by_user_id,
-        title,
-        description,
-        status,
-        priority,
-        due_date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        project_id,
-        assigned_to_user_id,
-        req.user.id,
-        title,
-        description || null,
-        status || "Pending",
-        priority || "Medium",
-        due_date || null
-      ]
-    );
+    const connection = await db.getConnection();
+    const createdTaskIds = [];
+
+    try {
+      await connection.beginTransaction();
+
+      for (const assigneeId of assigneeIds) {
+        const [result] = await connection.execute(
+          `INSERT INTO tasks (
+            project_id,
+            assigned_to_user_id,
+            created_by_user_id,
+            title,
+            description,
+            status,
+            priority,
+            due_date
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            project_id,
+            assigneeId,
+            req.user.id,
+            title,
+            description || null,
+            status || "Pending",
+            priority || "Medium",
+            due_date || null
+          ]
+        );
+
+        createdTaskIds.push(result.insertId);
+      }
+
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
 
     await logActivity({
       userId: req.user.id,
       action: "created task",
       targetType: "task",
-      targetId: result.insertId,
+      targetId: createdTaskIds[0],
       targetLabel: title
     });
 
-    emitDataChanged({ type: "task", action: "create", data: { id: result.insertId } });
+    for (const taskId of createdTaskIds) {
+      emitDataChanged({ type: "task", action: "create", data: { id: taskId } });
+    }
 
     return res.status(201).json({
-      message: "Task created successfully.",
-      taskId: result.insertId
+      message: createdTaskIds.length > 1 ? "Tasks created successfully." : "Task created successfully.",
+      taskId: createdTaskIds[0],
+      taskIds: createdTaskIds
     });
   } catch (error) {
     return res.status(500).json({ message: "Failed to create task.", error: error.message });

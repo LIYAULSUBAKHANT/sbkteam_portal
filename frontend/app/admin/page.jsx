@@ -40,6 +40,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -508,6 +509,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   const leaderboard = useAppStore((state) => state.leaderboard)
   const setTasks = useAppStore((state) => state.setTasks)
   const setSkills = useAppStore((state) => state.setSkills)
+  const setNotifications = useAppStore((state) => state.setNotifications)
   const setDashboardData = useAppStore((state) => state.setDashboardData)
   const refreshToken = useAppStore((state) => state.refreshToken)
   const resetStore = useAppStore((state) => state.resetStore)
@@ -554,7 +556,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     title: "",
     description: "",
     project_id: "",
-    assigned_to_user_id: "",
+    assigned_to_user_ids: [],
     priority: "Medium",
     due_date: "",
   })
@@ -865,7 +867,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   }
 
   function resetTaskForm() {
-    setTaskForm({ title: "", description: "", project_id: "", assigned_to_user_id: "", priority: "Medium", due_date: "" })
+    setTaskForm({ title: "", description: "", project_id: "", assigned_to_user_ids: [], priority: "Medium", due_date: "" })
     setEditingTaskId(null)
   }
 
@@ -1177,7 +1179,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     try {
       await apiPost("/api/tasks", {
         project_id: Number(taskForm.project_id),
-        assigned_to_user_id: Number(taskForm.assigned_to_user_id),
+        member_ids: taskForm.assigned_to_user_ids.map((value) => Number(value)),
         title: taskForm.title,
         description: taskForm.description,
         priority: taskForm.priority,
@@ -1198,7 +1200,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       title: task.title,
       description: task.description === "No description provided." ? "" : task.description,
       project_id: task.projectId,
-      assigned_to_user_id: task.assignedTo,
+      assigned_to_user_ids: [task.assignedTo],
       priority: task.priority,
       due_date: task.dueDate ? String(task.dueDate).split("T")[0] : "",
     })
@@ -1213,7 +1215,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       if (editingTaskId) {
         await apiPatch(`/api/tasks/${editingTaskId}`, {
           project_id: Number(taskForm.project_id),
-          assigned_to_user_id: Number(taskForm.assigned_to_user_id),
+          assigned_to_user_id: Number(taskForm.assigned_to_user_ids[0]),
           title: taskForm.title,
           description: taskForm.description,
           priority: taskForm.priority,
@@ -1393,6 +1395,31 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       await handleCreateReminder()
     } catch (error) {
       setActionError(error.message || "Failed to save reminder.")
+    }
+  }
+
+  async function handleNotificationsOpenChange(open) {
+    if (!open) {
+      return
+    }
+
+    const unreadIds = notifications.filter((notification) => !notification.read).map((notification) => notification.id)
+
+    if (unreadIds.length === 0) {
+      return
+    }
+
+    setNotifications((previous) => previous.map((notification) => (
+      unreadIds.includes(notification.id) ? { ...notification, read: true } : notification
+    )))
+
+    try {
+      await Promise.all(unreadIds.map((id) => apiPatch(`/api/notifications/${id}/read`, {})))
+    } catch (error) {
+      setNotifications((previous) => previous.map((notification) => (
+        unreadIds.includes(notification.id) ? { ...notification, read: false } : notification
+      )))
+      setActionError(error.message || "Failed to mark notifications as read.")
     }
   }
 
@@ -2808,7 +2835,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <DropdownMenu>
+            <DropdownMenu onOpenChange={handleNotificationsOpenChange}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
@@ -3373,13 +3400,41 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Assign To</Label>
-                  <Select value={taskForm.assigned_to_user_id} onValueChange={(value) => setTaskForm((prev) => ({ ...prev, assigned_to_user_id: value }))}>
-                    <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
-                    <SelectContent>
-                      {members.map((member) => <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Label>{editingTaskId ? "Assign To" : "Assign To Members"}</Label>
+                  <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-input p-3">
+                    {members.map((member) => {
+                      const isChecked = taskForm.assigned_to_user_ids.includes(member.id)
+
+                      return (
+                        <label key={member.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={isChecked}
+                            onCheckedChange={(checked) => {
+                              setTaskForm((prev) => {
+                                if (editingTaskId) {
+                                  return {
+                                    ...prev,
+                                    assigned_to_user_ids: checked ? [member.id] : [],
+                                  }
+                                }
+
+                                return {
+                                  ...prev,
+                                  assigned_to_user_ids: checked
+                                    ? [...new Set([...prev.assigned_to_user_ids, member.id])]
+                                    : prev.assigned_to_user_ids.filter((id) => id !== member.id),
+                                }
+                              })
+                            }}
+                          />
+                          <span>{member.name} ({member.email})</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {editingTaskId ? "Editing keeps one assignee for this task." : "Select multiple members to create the same task for all of them at once."}
+                  </p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
