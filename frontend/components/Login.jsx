@@ -117,7 +117,7 @@ export default function Login() {
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <Card className="w-full max-w-md border-border/70 shadow-xl">
         <CardHeader className="space-y-4 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-border">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-full">
             <Image src="/portal-logo.png" alt="Portal logo" width={64} height={64} className="h-full w-full object-cover" />
           </div>
           <div className="space-y-1.5">

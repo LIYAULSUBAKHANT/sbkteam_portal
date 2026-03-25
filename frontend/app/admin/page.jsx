@@ -2732,13 +2732,13 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
         <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
           {!sidebarCollapsed ? (
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-sidebar-border">
+              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full">
                 <Image src="/portal-logo.png" alt="Portal logo" width={36} height={36} className="h-full w-full object-cover" />
               </div>
               <span className="font-semibold text-sidebar-foreground">Team Portal</span>
             </div>
           ) : (
-            <div className="mx-auto flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-sidebar-border">
+            <div className="mx-auto flex h-9 w-9 items-center justify-center overflow-hidden rounded-full">
               <Image src="/portal-logo.png" alt="Portal logo" width={36} height={36} className="h-full w-full object-cover" />
             </div>
           )}
@@ -2785,7 +2785,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           <aside className="fixed left-0 top-0 h-full w-64 border-r border-sidebar-border bg-sidebar">
             <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
               <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-sidebar-border">
+                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full">
                   <Image src="/portal-logo.png" alt="Portal logo" width={36} height={36} className="h-full w-full object-cover" />
                 </div>
                 <span className="font-semibold text-sidebar-foreground">Team Portal</span>
