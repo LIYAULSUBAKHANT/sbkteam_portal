@@ -1,6 +1,6 @@
 "use client"
 
-const RAW_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"
+const RAW_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
 
 function getApiRootUrl() {
   const normalizedBase = RAW_BASE_URL.replace(/\/+$/, "")
