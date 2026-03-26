@@ -7,54 +7,86 @@ function canEditSkillAssignment(roleKey) {
 }
 
 function canDeleteSkillAssignment(roleKey) {
-  return roleKey === "captain";
+  return roleKey === "captain" || roleKey === "strategist";
 }
 
 async function assignSkill(req, res) {
   try {
-    const { user_id, skill_id, skill_name, level, description, assigned_at } = req.body;
+    const { user_id, user_ids, skill_id, skill_name, level, description, assigned_at } = req.body;
+    const normalizedUserIds = Array.isArray(user_ids)
+      ? [...new Set(user_ids.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0))]
+      : (Number.isInteger(Number(user_id)) && Number(user_id) > 0 ? [Number(user_id)] : []);
 
-    if (!user_id || !skill_name || !assigned_at) {
-      return res.status(400).json({ message: "user_id, skill_name, and assigned_at are required." });
+    if (normalizedUserIds.length === 0 || !skill_name || !assigned_at) {
+      return res.status(400).json({ message: "At least one user_id, skill_name, and assigned_at are required." });
     }
 
-    const [result] = await db.execute(
-      `INSERT INTO weekly_skill_assignments (
-        user_id,
-        skill_id,
-        assigned_by_user_id,
-        skill_name,
-        level,
-        description,
-        status,
-        assigned_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        user_id,
-        skill_id || null,
-        req.user.id,
-        skill_name,
-        level || "Beginner",
-        description || null,
-        "Pending",
-        assigned_at
-      ]
-    );
+    const [users] = await db.query("SELECT id FROM users WHERE id IN (?)", [normalizedUserIds]);
 
-    await logActivity({
-      userId: req.user.id,
-      action: "assigned weekly skill",
-      targetType: "weekly_skill_assignment",
-      targetId: result.insertId,
-      targetLabel: skill_name
-    });
+    if (users.length !== normalizedUserIds.length) {
+      return res.status(400).json({ message: "One or more user_ids are invalid." });
+    }
 
-    emitDataChanged({ type: "skill", action: "create", data: { id: result.insertId, userId: Number(user_id) } });
+    const connection = await db.getConnection();
 
-    return res.status(201).json({
-      message: "Skill assigned successfully.",
-      assignmentId: result.insertId
-    });
+    try {
+      await connection.beginTransaction();
+
+      const assignmentIds = [];
+
+      for (const targetUserId of normalizedUserIds) {
+        const [result] = await connection.execute(
+          `INSERT INTO weekly_skill_assignments (
+            user_id,
+            skill_id,
+            assigned_by_user_id,
+            skill_name,
+            level,
+            description,
+            status,
+            assigned_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            targetUserId,
+            skill_id || null,
+            req.user.id,
+            skill_name,
+            level || "Beginner",
+            description || null,
+            "Pending",
+            assigned_at
+          ]
+        );
+
+        assignmentIds.push(result.insertId);
+      }
+
+      await connection.commit();
+
+      for (const assignmentId of assignmentIds) {
+        await logActivity({
+          userId: req.user.id,
+          action: "assigned weekly skill",
+          targetType: "weekly_skill_assignment",
+          targetId: assignmentId,
+          targetLabel: skill_name
+        });
+      }
+
+      for (const targetUserId of normalizedUserIds) {
+        emitDataChanged({ type: "skill", action: "create", data: { userId: targetUserId } });
+      }
+
+      return res.status(201).json({
+        message: "Skill assigned successfully.",
+        assignmentIds
+      });
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   } catch (error) {
     return res.status(500).json({ message: "Failed to assign skill.", error: error.message });
   }

@@ -253,7 +253,7 @@ function getPermissions(role) {
     canAssignTasks: isCaptain || isLeader,
     canAssignSkills: isCaptain || isLeader,
     canEditAssignedSkills: isCaptain || isStrategist,
-    canDeleteAssignedSkills: isCaptain,
+    canDeleteAssignedSkills: isCaptain || isStrategist,
     canCreateAnnouncement: isCaptain || isLeader,
     canViewLeaderboard: isCaptain || isLeader,
     canViewAnalytics: isCaptain || isLeader,
@@ -561,7 +561,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     due_date: "",
   })
   const [skillForm, setSkillForm] = useState({
-    user_id: "",
+    user_ids: [],
     skill_name: "",
     level: "Beginner",
     description: "",
@@ -873,7 +873,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
 
   function resetSkillForm() {
     setSkillForm({
-      user_id: "",
+      user_ids: [],
       skill_name: "",
       level: "Beginner",
       description: "",
@@ -1240,8 +1240,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     setActionMessage("")
 
     try {
-      const payload = {
-        user_id: Number(skillForm.user_id),
+      const basePayload = {
         skill_name: skillForm.skill_name,
         level: skillForm.level,
         description: skillForm.description,
@@ -1249,8 +1248,16 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       }
 
       if (editingSkillId) {
+        const payload = {
+          user_id: Number(skillForm.user_ids[0]),
+          ...basePayload,
+        }
         await apiPatch(`/api/weekly-skills/${editingSkillId}`, payload)
       } else {
+        const payload = {
+          user_ids: skillForm.user_ids.map((value) => Number(value)),
+          ...basePayload,
+        }
         await apiPost("/api/weekly-skills", payload)
       }
 
@@ -1266,7 +1273,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   function openSkillEditModal(skill) {
     setEditingSkillId(skill.id)
     setSkillForm({
-      user_id: skill.userId,
+      user_ids: [skill.userId],
       skill_name: skill.skillName,
       level: skill.level || "Beginner",
       description: skill.description === "No description provided." ? "" : skill.description,
@@ -3473,13 +3480,41 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label>Member</Label>
-                <Select value={skillForm.user_id} onValueChange={(value) => setSkillForm((prev) => ({ ...prev, user_id: value }))}>
-                  <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
-                  <SelectContent>
-                    {members.map((member) => <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Label>{editingSkillId ? "Member" : "Assign To Members"}</Label>
+                <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-input p-3">
+                  {members.map((member) => {
+                    const isChecked = skillForm.user_ids.includes(member.id)
+
+                    return (
+                      <label key={member.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={(checked) => {
+                            setSkillForm((prev) => {
+                              if (editingSkillId) {
+                                return {
+                                  ...prev,
+                                  user_ids: checked ? [member.id] : [],
+                                }
+                              }
+
+                              return {
+                                ...prev,
+                                user_ids: checked
+                                  ? [...new Set([...prev.user_ids, member.id])]
+                                  : prev.user_ids.filter((id) => id !== member.id),
+                              }
+                            })
+                          }}
+                        />
+                        <span>{member.name} ({member.email})</span>
+                      </label>
+                    )
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {editingSkillId ? "Editing keeps this skill linked to one member." : "Select multiple members to assign the same skill to all of them at once."}
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Skill Name</Label>
