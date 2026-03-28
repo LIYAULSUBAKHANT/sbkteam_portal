@@ -71,6 +71,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost, apiPut, clearStoredAuth, getStoredAuth } from "@/lib/api"
 import { useAppStore } from "@/lib/app-store"
 import { cn } from "@/lib/utils"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 const menuItems = [
   { name: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
@@ -2842,6 +2843,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           </div>
 
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <DropdownMenu onOpenChange={handleNotificationsOpenChange}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
@@ -3084,7 +3086,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
 
               <div className="flex flex-col gap-6">
                 {/* Academic Profile */}
-                <div className="bg-zinc-900 rounded-xl p-5 w-full">
+                <div className="w-full rounded-xl border border-border bg-card p-5 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Academic Profile</p>
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     <div>
@@ -3107,26 +3109,26 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 </div>
 
                 {/* Performance */}
-                <div className="bg-zinc-900 rounded-xl p-5 w-full">
+                <div className="w-full rounded-xl border border-border bg-card p-5 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Performance</p>
                   <div className="mt-4 flex justify-between gap-4">
                     <div className="flex-1 text-center">
-                      <p className="text-xs uppercase tracking-wide text-gray-400">Activity</p>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Activity</p>
                       <p className="mt-2 text-xl font-bold text-foreground">{selectedMember?.activity_points || 0}</p>
                     </div>
                     <div className="flex-1 text-center">
-                      <p className="text-xs uppercase tracking-wide text-gray-400">Reward</p>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Reward</p>
                       <p className="mt-2 text-xl font-bold text-foreground">{selectedMember?.reward_points || 0}</p>
                     </div>
                     <div className="flex-1 text-center">
-                      <p className="text-xs uppercase tracking-wide text-gray-400">Tasks</p>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Tasks</p>
                       <p className="mt-2 text-xl font-bold text-foreground">{selectedMember?.tasks || 0}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Skills Overview */}
-                <div className="bg-zinc-900 rounded-xl p-5 w-full">
+                <div className="w-full rounded-xl border border-border bg-card p-5 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Skills Overview</p>
                   <div className="mt-4 space-y-4">
                     <div>
@@ -3175,7 +3177,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 </div>
 
                 {/* Links */}
-                <div className="bg-zinc-900 rounded-xl p-5 w-full">
+                <div className="w-full rounded-xl border border-border bg-card p-5 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Links</p>
                   <div className="mt-4 space-y-3">
                     <div className="rounded-lg bg-muted/40 p-4">

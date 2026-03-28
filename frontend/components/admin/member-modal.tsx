@@ -159,7 +159,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit }: MemberModa
               {/* Primary Skills */}
               {(member.primary_skill_1 || member.primary_skill_2) && (
                 <div className="mt-6">
-                  <h3 className="text-sm text-gray-400 mb-2">Primary Skills</h3>
+                  <h3 className="mb-2 text-sm text-muted-foreground">Primary Skills</h3>
                   <div className="flex flex-wrap gap-2">
                     {member.primary_skill_1 && <span className="skill-badge">{member.primary_skill_1}</span>}
                     {member.primary_skill_2 && <span className="skill-badge">{member.primary_skill_2}</span>}
@@ -170,7 +170,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit }: MemberModa
               {/* Secondary Skills */}
               {(member.secondary_skill_1 || member.secondary_skill_2) && (
                 <div className="mt-4">
-                  <h3 className="text-sm text-gray-400 mb-2">Secondary Skills</h3>
+                  <h3 className="mb-2 text-sm text-muted-foreground">Secondary Skills</h3>
                   <div className="flex flex-wrap gap-2">
                     {member.secondary_skill_1 && <span className="skill-badge">{member.secondary_skill_1}</span>}
                     {member.secondary_skill_2 && <span className="skill-badge">{member.secondary_skill_2}</span>}
@@ -181,7 +181,7 @@ export function MemberModal({ open, onOpenChange, member, onSubmit }: MemberModa
               {/* Special Skills */}
               {(member.special_skill_1 || member.special_skill_2) && (
                 <div className="mt-4">
-                  <h3 className="text-sm text-gray-400 mb-2">Special Skills</h3>
+                  <h3 className="mb-2 text-sm text-muted-foreground">Special Skills</h3>
                   <div className="flex flex-wrap gap-2">
                     {member.special_skill_1 && <span className="skill-badge">{member.special_skill_1}</span>}
                     {member.special_skill_2 && <span className="skill-badge">{member.special_skill_2}</span>}
