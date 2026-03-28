@@ -16,6 +16,35 @@ function maskSecret(value) {
   return `${value.slice(0, 2)}***${value.slice(-1)}`;
 }
 
+function isTruthy(value) {
+  return ["1", "true", "yes", "on", "required"].includes(String(value || "").trim().toLowerCase());
+}
+
+function shouldUseSsl(host) {
+  if (process.env.DB_SSL !== undefined) {
+    return isTruthy(process.env.DB_SSL);
+  }
+
+  return String(host || "").includes(".aivencloud.com");
+}
+
+function getSslConfig(host) {
+  if (!shouldUseSsl(host)) {
+    return false;
+  }
+
+  const ca = process.env.DB_SSL_CA
+    ? String(process.env.DB_SSL_CA).replace(/\\n/g, "\n")
+    : undefined;
+  const rejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED === undefined
+    ? true
+    : isTruthy(process.env.DB_SSL_REJECT_UNAUTHORIZED);
+
+  return ca
+    ? { ca, rejectUnauthorized }
+    : { rejectUnauthorized };
+}
+
 const dbConfig = {
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT || 3306),
@@ -24,7 +53,7 @@ const dbConfig = {
   database: process.env.DB_NAME,
   timezone: '+05:30',
   dateStrings: true,
-  ssl: false,
+  ssl: getSslConfig(process.env.DB_HOST),
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -36,7 +65,12 @@ console.log("[DB] Connection config:", {
   port: dbConfig.port,
   user: dbConfig.user,
   database: dbConfig.database,
-  password: maskSecret(dbConfig.password)
+  password: maskSecret(dbConfig.password),
+  ssl: dbConfig.ssl ? {
+    enabled: true,
+    rejectUnauthorized: dbConfig.ssl.rejectUnauthorized,
+    hasCa: Boolean(dbConfig.ssl.ca)
+  } : { enabled: false }
 });
 
 const pool = mysql.createPool(dbConfig);
