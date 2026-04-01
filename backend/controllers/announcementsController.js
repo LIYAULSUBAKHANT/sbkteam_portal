@@ -54,7 +54,7 @@ async function markAnnouncementsSeen(announcementIds, userId) {
   );
 }
 
-function buildReactionSummary(announcementIds, reactionRows, viewerUserId, includeSeenBy) {
+function buildReactionSummary(announcementIds, reactionRows, viewerUserId, includeReactionDetails) {
   const reactionMap = new Map(
     announcementIds.map((announcementId) => [
       String(announcementId),
@@ -66,6 +66,8 @@ function buildReactionSummary(announcementIds, reactionRows, viewerUserId, inclu
         viewer_has_acknowledged: false,
         viewer_has_seen: false,
         seen_by: [],
+        liked_by: [],
+        acknowledged_by: [],
       },
     ])
   );
@@ -82,12 +84,30 @@ function buildReactionSummary(announcementIds, reactionRows, viewerUserId, inclu
       if (Number(row.user_id) === Number(viewerUserId)) {
         bucket.viewer_has_liked = true;
       }
+
+      if (includeReactionDetails) {
+        bucket.liked_by.push({
+          user_id: row.user_id,
+          full_name: row.full_name,
+          email: row.email,
+          reacted_at: row.created_at,
+        });
+      }
     }
 
     if (row.reaction_type === "acknowledge") {
       bucket.acknowledge_count += 1;
       if (Number(row.user_id) === Number(viewerUserId)) {
         bucket.viewer_has_acknowledged = true;
+      }
+
+      if (includeReactionDetails) {
+        bucket.acknowledged_by.push({
+          user_id: row.user_id,
+          full_name: row.full_name,
+          email: row.email,
+          reacted_at: row.created_at,
+        });
       }
     }
 
@@ -97,7 +117,7 @@ function buildReactionSummary(announcementIds, reactionRows, viewerUserId, inclu
         bucket.viewer_has_seen = true;
       }
 
-      if (includeSeenBy) {
+      if (includeReactionDetails) {
         bucket.seen_by.push({
           user_id: row.user_id,
           full_name: row.full_name,
@@ -295,7 +315,7 @@ async function updateAnnouncement(req, res) {
 
 async function getAnnouncements(req, res) {
   try {
-    const isLeader = req.user.roleKey !== "member";
+    const canViewReactionDetails = req.user.roleKey === "captain";
     const visibility = buildAnnouncementVisibilityClause(req.user);
     const [rows] = await db.execute(
       `SELECT
@@ -345,7 +365,7 @@ async function getAnnouncements(req, res) {
         announcementIds,
         reactionRows,
         req.user.id,
-        isLeader
+        canViewReactionDetails
       );
     }
 
@@ -359,6 +379,8 @@ async function getAnnouncements(req, res) {
         viewer_has_acknowledged: false,
         viewer_has_seen: false,
         seen_by: [],
+        liked_by: [],
+        acknowledged_by: [],
       }),
     }));
 

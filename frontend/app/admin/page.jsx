@@ -32,8 +32,10 @@ import {
   Search,
   Send,
   Settings,
+  SquarePen,
   Shield,
   Target,
+  Trash2,
   Trophy,
   Users,
   UsersRound,
@@ -453,6 +455,8 @@ function normalizeAnnouncement(announcement) {
     viewerHasAcknowledged: Boolean(announcement.viewer_has_acknowledged),
     viewerHasSeen: Boolean(announcement.viewer_has_seen),
     seenBy: Array.isArray(announcement.seen_by) ? announcement.seen_by : [],
+    likedBy: Array.isArray(announcement.liked_by) ? announcement.liked_by : [],
+    acknowledgedBy: Array.isArray(announcement.acknowledged_by) ? announcement.acknowledged_by : [],
   }
 }
 
@@ -489,6 +493,8 @@ function normalizeDiscussionComment(comment) {
     body: comment.body || "",
     createdAt: comment.created_at,
     updatedAt: comment.updated_at,
+    canEdit: Boolean(comment.can_edit),
+    canDelete: Boolean(comment.can_delete),
   }
 }
 
@@ -651,6 +657,8 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   const [discussionDrafts, setDiscussionDrafts] = useState({})
   const [discussionReplyDrafts, setDiscussionReplyDrafts] = useState({})
   const [discussionReplyEditors, setDiscussionReplyEditors] = useState({})
+  const [discussionEditDrafts, setDiscussionEditDrafts] = useState({})
+  const [discussionEditState, setDiscussionEditState] = useState({})
 
   useEffect(() => {
     if (!actionMessage) {
@@ -933,12 +941,93 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     }
   }
 
+  function openDiscussionEdit(sourceType, sourceId, comment) {
+    const key = `${getDiscussionKey(sourceType, sourceId)}:${comment.id}`
+    setDiscussionEditState((previous) => ({ ...previous, [key]: true }))
+    setDiscussionEditDrafts((previous) => ({ ...previous, [key]: comment.body }))
+  }
+
+  async function handleDiscussionEditSave(sourceType, sourceId, commentId) {
+    const threadKey = getDiscussionKey(sourceType, sourceId)
+    const editKey = `${threadKey}:${commentId}`
+    const body = String(discussionEditDrafts[editKey] || "").trim()
+
+    if (!body) {
+      return
+    }
+
+    setDiscussionSubmittingState((previous) => ({ ...previous, [editKey]: true }))
+    setActionError("")
+
+    try {
+      await apiPatch(`/api/discussions/comments/${commentId}`, { body })
+      setDiscussionEditState((previous) => ({ ...previous, [editKey]: false }))
+      await loadDiscussionThread(sourceType, sourceId)
+      setActionMessage("Comment updated successfully.")
+    } catch (error) {
+      setActionError(error.message || "Failed to update comment.")
+    } finally {
+      setDiscussionSubmittingState((previous) => ({ ...previous, [editKey]: false }))
+    }
+  }
+
+  async function handleDiscussionDelete(sourceType, sourceId, comment) {
+    const confirmed = window.confirm(`Delete this comment from ${comment.authorName}?`)
+
+    if (!confirmed) {
+      return
+    }
+
+    const threadKey = getDiscussionKey(sourceType, sourceId)
+    const deleteKey = `${threadKey}:delete:${comment.id}`
+    setDiscussionSubmittingState((previous) => ({ ...previous, [deleteKey]: true }))
+    setActionError("")
+
+    try {
+      await apiDelete(`/api/discussions/comments/${comment.id}`)
+      await loadDiscussionThread(sourceType, sourceId)
+      setActionMessage("Comment deleted successfully.")
+    } catch (error) {
+      setActionError(error.message || "Failed to delete comment.")
+    } finally {
+      setDiscussionSubmittingState((previous) => ({ ...previous, [deleteKey]: false }))
+    }
+  }
+
+  function renderReactionPeopleList(title, people, emptyMessage) {
+    return (
+      <div>
+        <p className="text-sm font-medium text-foreground">{title}</p>
+        {people.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">{emptyMessage}</p>
+        ) : (
+          <div className="mt-3 max-h-56 space-y-2 overflow-y-auto">
+            {people.map((person) => (
+              <div key={`${title}:${person.user_id}`} className="rounded-lg border border-border bg-muted/40 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-foreground">{person.full_name}</p>
+                    <p className="text-xs text-muted-foreground">{person.email}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{formatDateTime(person.reacted_at)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   function renderDiscussionCommentNodes(sourceType, sourceId, comments, depth = 0) {
     const threadKey = getDiscussionKey(sourceType, sourceId)
 
     return comments.map((comment) => {
       const replyKey = `${threadKey}:${comment.id}`
       const isReplyOpen = Boolean(discussionReplyEditors[replyKey])
+      const editKey = `${threadKey}:${comment.id}`
+      const deleteKey = `${threadKey}:delete:${comment.id}`
+      const isEditing = Boolean(discussionEditState[editKey])
 
       return (
         <div key={comment.id} className={cn("space-y-3 rounded-lg border border-border/60 bg-background/80 p-3", depth > 0 && "ml-4")}>
@@ -947,16 +1036,58 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
               <p className="text-sm font-medium text-foreground">{comment.authorName}</p>
               <p className="text-xs text-muted-foreground">{formatDateTime(comment.createdAt)}</p>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setDiscussionReplyEditors((previous) => ({ ...previous, [replyKey]: !previous[replyKey] }))}
-            >
-              <Reply className="mr-1 h-4 w-4" />
-              Reply
-            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDiscussionReplyEditors((previous) => ({ ...previous, [replyKey]: !previous[replyKey] }))}
+              >
+                <Reply className="mr-1 h-4 w-4" />
+                Reply
+              </Button>
+              {comment.canEdit ? (
+                <Button variant="ghost" size="sm" onClick={() => openDiscussionEdit(sourceType, sourceId, comment)}>
+                  <SquarePen className="mr-1 h-4 w-4" />
+                  Edit
+                </Button>
+              ) : null}
+              {comment.canDelete ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={Boolean(discussionSubmittingState[deleteKey])}
+                  onClick={() => handleDiscussionDelete(sourceType, sourceId, comment)}
+                >
+                  <Trash2 className="mr-1 h-4 w-4" />
+                  Delete
+                </Button>
+              ) : null}
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{comment.body}</p>
+
+          {isEditing ? (
+            <div className="space-y-2 rounded-lg border border-dashed border-border p-3">
+              <Textarea
+                value={discussionEditDrafts[editKey] || ""}
+                onChange={(event) => setDiscussionEditDrafts((previous) => ({ ...previous, [editKey]: event.target.value }))}
+                rows={3}
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setDiscussionEditState((previous) => ({ ...previous, [editKey]: false }))}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={Boolean(discussionSubmittingState[editKey])}
+                  onClick={() => handleDiscussionEditSave(sourceType, sourceId, comment.id)}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{comment.body}</p>
+          )}
 
           {isReplyOpen ? (
             <div className="space-y-2 rounded-lg border border-dashed border-border p-3">
@@ -2049,7 +2180,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                           <Eye className="h-3.5 w-3.5" />
                           Seen {announcement.seenCount}
                         </Badge>
-                      ) : (
+                      ) : currentUser?.roleKey === "captain" ? (
                         <Button
                           variant="secondary"
                           size="sm"
@@ -2058,6 +2189,11 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                           <Eye className="mr-1 h-4 w-4" />
                           Seen by {announcement.seenCount}
                         </Button>
+                      ) : (
+                        <Badge variant="secondary" className="gap-1">
+                          <Eye className="mr-1 h-4 w-4" />
+                          Seen {announcement.seenCount}
+                        </Badge>
                       )}
                       <Button
                         variant="outline"
@@ -3924,6 +4060,21 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                     </div>
                   )}
                 </div>
+
+                {currentUser?.roleKey === "captain" ? (
+                  <>
+                    {renderReactionPeopleList(
+                      "Liked By",
+                      selectedAnnouncement.likedBy || [],
+                      "No likes yet."
+                    )}
+                    {renderReactionPeopleList(
+                      "Acknowledged By",
+                      selectedAnnouncement.acknowledgedBy || [],
+                      "No acknowledgements yet."
+                    )}
+                  </>
+                ) : null}
               </div>
             ) : null}
           </DialogContent>

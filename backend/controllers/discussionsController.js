@@ -8,6 +8,34 @@ const {
   createThreadParticipantsNotifications,
 } = require("../services/discussionsService");
 
+function canModerateAnyComment(user) {
+  return user.roleKey === "captain";
+}
+
+function canModifyComment(comment, user) {
+  return Number(comment.author_user_id) === Number(user.id) || canModerateAnyComment(user);
+}
+
+async function getCommentRecord(commentId) {
+  const [rows] = await db.execute(
+    `SELECT
+      dc.id,
+      dc.thread_id,
+      dc.parent_comment_id,
+      dc.author_user_id,
+      dc.body,
+      dt.title AS thread_title,
+      dt.source_type,
+      dt.source_id
+     FROM discussion_comments dc
+     INNER JOIN discussion_threads dt ON dt.id = dc.thread_id
+     WHERE dc.id = ?`,
+    [commentId]
+  );
+
+  return rows[0] || null;
+}
+
 async function resolveThreadAccessBySource(sourceType, sourceId, user) {
   if (sourceType === "task") {
     const [rows] = await db.execute(
@@ -142,7 +170,11 @@ async function getThreadBySource(req, res) {
 
     return res.status(200).json({
       thread: serializeRows(threadRows)[0],
-      comments: serializeRows(commentRows),
+      comments: serializeRows(commentRows).map((comment) => ({
+        ...comment,
+        can_edit: Number(comment.author_user_id) === Number(req.user.id),
+        can_delete: Number(comment.author_user_id) === Number(req.user.id) || canModerateAnyComment(req.user),
+      })),
     });
   } catch (error) {
     return res.status(500).json({ message: "Failed to fetch discussion thread.", error: error.message });
@@ -249,4 +281,109 @@ async function createThreadComment(req, res) {
   }
 }
 
-module.exports = { getThreadBySource, createThreadComment };
+async function updateThreadComment(req, res) {
+  try {
+    const { commentId } = req.params;
+    const { body } = req.body;
+
+    if (!body || !String(body).trim()) {
+      return res.status(400).json({ message: "body is required." });
+    }
+
+    const comment = await getCommentRecord(commentId);
+
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found." });
+    }
+
+    if (!canModifyComment(comment, req.user) || Number(comment.author_user_id) !== Number(req.user.id)) {
+      return res.status(403).json({ message: "You can only edit your own comments." });
+    }
+
+    if (comment.source_type && comment.source_id) {
+      const sourceContext = await resolveThreadAccessBySource(comment.source_type, comment.source_id, req.user);
+
+      if (!sourceContext) {
+        return res.status(403).json({ message: "You do not have access to this discussion." });
+      }
+    }
+
+    const trimmedBody = String(body).trim();
+
+    await db.execute(
+      `UPDATE discussion_comments
+       SET body = ?, updated_at = NOW()
+       WHERE id = ?`,
+      [trimmedBody, commentId]
+    );
+
+    const mentionedUsers = await createMentionNotifications({
+      body: trimmedBody,
+      authorUserId: req.user.id,
+      authorName: req.user.fullName,
+      threadTitle: comment.thread_title,
+    });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "updated discussion comment",
+      targetType: "discussion_comment",
+      targetId: Number(commentId),
+      targetLabel: comment.thread_title,
+    });
+
+    emitDataChanged({ type: "discussion", action: "comment_update", data: { threadId: Number(comment.thread_id), commentId: Number(commentId) } });
+
+    return res.status(200).json({
+      message: "Comment updated successfully.",
+      mentionedUserIds: mentionedUsers.map((user) => user.id),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to update discussion comment.", error: error.message });
+  }
+}
+
+async function deleteThreadComment(req, res) {
+  try {
+    const { commentId } = req.params;
+    const comment = await getCommentRecord(commentId);
+
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found." });
+    }
+
+    if (!canModifyComment(comment, req.user)) {
+      return res.status(403).json({ message: "You do not have permission to delete this comment." });
+    }
+
+    if (comment.source_type && comment.source_id) {
+      const sourceContext = await resolveThreadAccessBySource(comment.source_type, comment.source_id, req.user);
+
+      if (!sourceContext) {
+        return res.status(403).json({ message: "You do not have access to this discussion." });
+      }
+    }
+
+    await db.execute(
+      `DELETE FROM discussion_comments
+       WHERE id = ?`,
+      [commentId]
+    );
+
+    await logActivity({
+      userId: req.user.id,
+      action: "deleted discussion comment",
+      targetType: "discussion_comment",
+      targetId: Number(commentId),
+      targetLabel: comment.thread_title,
+    });
+
+    emitDataChanged({ type: "discussion", action: "comment_delete", data: { threadId: Number(comment.thread_id), commentId: Number(commentId) } });
+
+    return res.status(200).json({ message: "Comment deleted successfully." });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to delete discussion comment.", error: error.message });
+  }
+}
+
+module.exports = { getThreadBySource, createThreadComment, updateThreadComment, deleteThreadComment };
