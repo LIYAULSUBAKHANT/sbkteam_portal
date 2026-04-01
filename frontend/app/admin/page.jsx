@@ -433,6 +433,7 @@ function normalizeSkill(skill) {
     description: skill.description || "No description provided.",
     status: skill.status,
     assignedBy: skill.assigned_by_name || "System",
+    assignedByUserId: skill.assigned_by_user_id ? String(skill.assigned_by_user_id) : "",
     assignedAt: skill.assigned_at,
   }
 }
@@ -1176,6 +1177,10 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     () => menuItems.filter((item) => item.key !== "leaderboard" || permissions.canViewLeaderboard),
     [permissions.canViewLeaderboard]
   )
+  const memberMap = useMemo(
+    () => new Map(members.map((member) => [String(member.id), member])),
+    [members]
+  )
   const visibleTasks = useMemo(
     () => (isMember ? tasks.filter((task) => task.assignedTo === currentUser?.id) : tasks),
     [currentUser?.id, isMember, tasks]
@@ -1220,6 +1225,60 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     }
   }, [members, projects, visibleLeaderboard, visibleSkills, visibleTasks])
   const unreadNotifications = notifications.filter((notification) => !notification.read).length
+
+  function getMemberById(userId) {
+    if (!userId) {
+      return null
+    }
+
+    if (String(currentUser?.id || "") === String(userId)) {
+      return currentUser
+    }
+
+    return memberMap.get(String(userId)) || null
+  }
+
+  function getMemberByName(name) {
+    const normalizedName = String(name || "").trim().toLowerCase()
+
+    if (!normalizedName) {
+      return null
+    }
+
+    if (String(currentUser?.name || "").trim().toLowerCase() === normalizedName) {
+      return currentUser
+    }
+
+    return members.find((member) => String(member.name || "").trim().toLowerCase() === normalizedName) || null
+  }
+
+  function renderMemberIdentity(member, fallbackLabel, options = {}) {
+    const resolvedMember = member || null
+    const RoleIcon = roleIcons[resolvedMember?.role || "Member"] || Circle
+    const avatarLabel = resolvedMember?.avatar || getInitials(fallbackLabel)
+    const nameLabel = fallbackLabel || resolvedMember?.name || "Unassigned"
+    const sizeClass = options.compact ? "h-7 w-7 text-[11px]" : "h-8 w-8 text-xs"
+    const iconClass = options.compact ? "h-3 w-3" : "h-3.5 w-3.5"
+
+    return (
+      <div className="flex min-w-0 items-center gap-2">
+        <Avatar className={sizeClass}>
+          <AvatarFallback className="bg-primary/10 text-primary">{avatarLabel}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="truncate font-medium text-foreground">{nameLabel}</span>
+            {resolvedMember?.role ? (
+              <RoleIcon className={cn(iconClass, "shrink-0 text-primary")} />
+            ) : null}
+          </div>
+          {resolvedMember?.role ? (
+            <p className="truncate text-[11px] text-muted-foreground">{resolvedMember.role}</p>
+          ) : null}
+        </div>
+      </div>
+    )
+  }
 
   async function handleTaskStatusChange(taskId, status) {
     setActionError("")
@@ -1885,8 +1944,8 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   <p className="text-sm font-medium text-muted-foreground">My Reward Points</p>
                   <p className="text-3xl font-bold text-foreground">{currentUser?.reward_points || 0}</p>
                 </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
-                  <Trophy className="h-6 w-6 text-accent" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                  <Trophy className="h-6 w-6 text-primary" />
                 </div>
               </div>
             </CardContent>
@@ -1899,8 +1958,8 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   <p className="text-sm font-medium text-muted-foreground">My CGPA</p>
                   <p className="text-3xl font-bold text-foreground">{currentUser?.cgpa || 0}</p>
                 </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10">
-                  <GraduationCap className="h-6 w-6 text-warning" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                  <GraduationCap className="h-6 w-6 text-primary" />
                 </div>
               </div>
             </CardContent>
@@ -2704,6 +2763,10 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   </Avatar>
                   <div>
                     <CardTitle className="text-base font-semibold text-foreground">{member.name}</CardTitle>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-primary">
+                      {(roleIcons[member.role] || Circle)({ className: "h-3.5 w-3.5" })}
+                      <span>{member.role}</span>
+                    </div>
                     <CardDescription>{member.team} • {member.role}</CardDescription>
                   </div>
                 </div>
@@ -2747,7 +2810,16 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                           </Button>
                         ) : null}
                       </div>
-                      <p className="text-xs text-muted-foreground">Assigned by {skill.assignedBy}</p>
+                      <div className="text-xs text-muted-foreground">
+                        <span className="mr-1">Assigned by</span>
+                        <div className="mt-2">
+                          {renderMemberIdentity(
+                            getMemberById(skill.assignedByUserId) || getMemberByName(skill.assignedBy),
+                            skill.assignedBy,
+                            { compact: true }
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -3538,7 +3610,8 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Badge className={cn("border", roleColors[selectedMember?.role || "Member"])}>
+                    <Badge className={cn("border gap-1.5", roleColors[selectedMember?.role || "Member"])}>
+                      {((roleIcons[selectedMember?.role || "Member"] || Circle))({ className: "h-3 w-3" })}
                       {selectedMember?.role || "Member"}
                     </Badge>
                     <Badge variant="outline">{selectedMember?.team || "Unassigned"}</Badge>
@@ -3871,16 +3944,17 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>{editingTaskId ? "Assign To" : "Assign To Members"}</Label>
-                  <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-input p-3">
-                    {members.map((member) => {
-                      const isChecked = taskForm.assigned_to_user_ids.includes(member.id)
+              <div className="space-y-2">
+                <Label>{editingTaskId ? "Assign To" : "Assign To Members"}</Label>
+                <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-input p-3">
+                  {members.map((member) => {
+                    const isChecked = taskForm.assigned_to_user_ids.includes(member.id)
+                    const RoleIcon = roleIcons[member.role] || Circle
 
-                      return (
-                        <label key={member.id} className="flex cursor-pointer items-center gap-2 text-sm">
-                          <Checkbox
-                            checked={isChecked}
+                    return (
+                      <label key={member.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={isChecked}
                             onCheckedChange={(checked) => {
                               setTaskForm((prev) => {
                                 if (editingTaskId) {
@@ -3899,7 +3973,18 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                               })
                             }}
                           />
-                          <span>{member.name} ({member.email})</span>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <Avatar className="h-7 w-7">
+                              <AvatarFallback className="bg-primary/10 text-[11px] text-primary">{member.avatar}</AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="truncate">{member.name}</span>
+                                <RoleIcon className="h-3 w-3 shrink-0 text-primary" />
+                              </div>
+                              <p className="truncate text-xs text-muted-foreground">{member.email}</p>
+                            </div>
+                          </div>
                         </label>
                       )
                     })}
@@ -3949,6 +4034,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-input p-3">
                   {members.map((member) => {
                     const isChecked = skillForm.user_ids.includes(member.id)
+                    const RoleIcon = roleIcons[member.role] || Circle
 
                     return (
                       <label key={member.id} className="flex cursor-pointer items-center gap-2 text-sm">
@@ -3968,11 +4054,22 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                                 user_ids: checked
                                   ? [...new Set([...prev.user_ids, member.id])]
                                   : prev.user_ids.filter((id) => id !== member.id),
-                              }
-                            })
-                          }}
-                        />
-                        <span>{member.name} ({member.email})</span>
+                                }
+                              })
+                            }}
+                          />
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Avatar className="h-7 w-7">
+                            <AvatarFallback className="bg-primary/10 text-[11px] text-primary">{member.avatar}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="truncate">{member.name}</span>
+                              <RoleIcon className="h-3 w-3 shrink-0 text-primary" />
+                            </div>
+                            <p className="truncate text-xs text-muted-foreground">{member.email}</p>
+                          </div>
+                        </div>
                       </label>
                     )
                   })}
