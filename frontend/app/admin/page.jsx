@@ -2764,7 +2764,10 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   <div>
                     <CardTitle className="text-base font-semibold text-foreground">{member.name}</CardTitle>
                     <div className="mt-1 flex items-center gap-1.5 text-xs text-primary">
-                      {(roleIcons[member.role] || Circle)({ className: "h-3.5 w-3.5" })}
+                      {(() => {
+                        const MemberRoleIcon = roleIcons[member.role] || Circle
+                        return <MemberRoleIcon className="h-3.5 w-3.5" />
+                      })()}
                       <span>{member.role}</span>
                     </div>
                     <CardDescription>{member.team} • {member.role}</CardDescription>
@@ -3611,7 +3614,10 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Badge className={cn("border gap-1.5", roleColors[selectedMember?.role || "Member"])}>
-                      {((roleIcons[selectedMember?.role || "Member"] || Circle))({ className: "h-3 w-3" })}
+                      {(() => {
+                        const SelectedRoleIcon = roleIcons[selectedMember?.role || "Member"] || Circle
+                        return <SelectedRoleIcon className="h-3 w-3" />
+                      })()}
                       {selectedMember?.role || "Member"}
                     </Badge>
                     <Badge variant="outline">{selectedMember?.team || "Unassigned"}</Badge>
