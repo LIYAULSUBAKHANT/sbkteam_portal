@@ -1,6 +1,7 @@
 const db = require("../db");
 const { logActivity } = require("./activityLogController");
 const { emitDataChanged } = require("../socket");
+const { ensureDiscussionThread } = require("../services/discussionsService");
 
 async function createTask(req, res) {
   try {
@@ -67,6 +68,14 @@ async function createTask(req, res) {
     });
 
     for (const taskId of createdTaskIds) {
+      await ensureDiscussionThread({
+        sourceType: "task",
+        sourceId: taskId,
+        title: `Task: ${title}`,
+        createdByUserId: req.user.id,
+        contextPreview: description || null,
+      });
+
       emitDataChanged({ type: "task", action: "create", data: { id: taskId } });
     }
 
@@ -202,6 +211,14 @@ async function updateTask(req, res) {
         id
       ]
     );
+
+    await ensureDiscussionThread({
+      sourceType: "task",
+      sourceId: Number(id),
+      title: `Task: ${title || rows[0].title}`,
+      createdByUserId: req.user.id,
+      contextPreview: description || null,
+    });
 
     await logActivity({
       userId: req.user.id,

@@ -10,6 +10,7 @@ import {
   BookOpen,
   Calendar,
   CheckCircle2,
+  CheckCheck,
   ChevronLeft,
   ChevronRight,
   Circle,
@@ -18,14 +19,18 @@ import {
   Eye,
   FolderKanban,
   GraduationCap,
+  Heart,
   LayoutDashboard,
   ListTodo,
   LogOut,
   Megaphone,
   Menu,
+  MessageSquare,
   Plus,
   RefreshCw,
+  Reply,
   Search,
+  Send,
   Settings,
   Shield,
   Target,
@@ -441,6 +446,13 @@ function normalizeAnnouncement(announcement) {
     target: buildTargetLabel(announcement),
     author: announcement.author_name || "System",
     createdAt: announcement.created_at,
+    likeCount: Number(announcement.like_count || 0),
+    acknowledgeCount: Number(announcement.acknowledge_count || 0),
+    seenCount: Number(announcement.seen_count || 0),
+    viewerHasLiked: Boolean(announcement.viewer_has_liked),
+    viewerHasAcknowledged: Boolean(announcement.viewer_has_acknowledged),
+    viewerHasSeen: Boolean(announcement.viewer_has_seen),
+    seenBy: Array.isArray(announcement.seen_by) ? announcement.seen_by : [],
   }
 }
 
@@ -464,6 +476,52 @@ function normalizeNotification(notification) {
     time: formatRelativeTime(notification.created_at),
     read: Boolean(notification.is_read),
   }
+}
+
+function normalizeDiscussionComment(comment) {
+  return {
+    id: String(comment.id),
+    threadId: String(comment.thread_id),
+    parentCommentId: comment.parent_comment_id ? String(comment.parent_comment_id) : null,
+    authorId: String(comment.author_user_id),
+    authorName: comment.author_name || "Unknown user",
+    authorEmail: comment.author_email || "",
+    body: comment.body || "",
+    createdAt: comment.created_at,
+    updatedAt: comment.updated_at,
+  }
+}
+
+function normalizeDiscussionThread(payload) {
+  return {
+    id: String(payload?.thread?.id || ""),
+    sourceType: payload?.thread?.source_type || "general",
+    sourceId: payload?.thread?.source_id ? String(payload.thread.source_id) : "",
+    title: payload?.thread?.title || "Discussion",
+    contextPreview: payload?.thread?.context_preview || "",
+    isLocked: Boolean(payload?.thread?.is_locked),
+    comments: Array.isArray(payload?.comments) ? payload.comments.map(normalizeDiscussionComment) : [],
+  }
+}
+
+function nestDiscussionComments(comments) {
+  const commentMap = new Map()
+  const roots = []
+
+  comments.forEach((comment) => {
+    commentMap.set(comment.id, { ...comment, replies: [] })
+  })
+
+  commentMap.forEach((comment) => {
+    if (comment.parentCommentId && commentMap.has(comment.parentCommentId)) {
+      commentMap.get(comment.parentCommentId).replies.push(comment)
+      return
+    }
+
+    roots.push(comment)
+  })
+
+  return roots
 }
 
 function renderBanner(message, tone = "error") {
@@ -522,6 +580,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   const [taskModalOpen, setTaskModalOpen] = useState(false)
   const [skillModalOpen, setSkillModalOpen] = useState(false)
   const [announcementModalOpen, setAnnouncementModalOpen] = useState(false)
+  const [announcementInsightsOpen, setAnnouncementInsightsOpen] = useState(false)
   const [reminderModalOpen, setReminderModalOpen] = useState(false)
   const [editingMemberId, setEditingMemberId] = useState(null)
   const [selectedMember, setSelectedMember] = useState(null)
@@ -530,6 +589,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   const [editingTaskId, setEditingTaskId] = useState(null)
   const [editingSkillId, setEditingSkillId] = useState(null)
   const [editingAnnouncementId, setEditingAnnouncementId] = useState(null)
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState(null)
   const [editingReminderId, setEditingReminderId] = useState(null)
   const [memberForm, setMemberForm] = useState(emptyMemberForm)
   const [performanceForm, setPerformanceForm] = useState({
@@ -575,6 +635,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     target_team_id: "",
     target_user_id: "",
   })
+  const [announcementReactionState, setAnnouncementReactionState] = useState({})
   const [reminderForm, setReminderForm] = useState({
     title: "",
     description: "",
@@ -583,6 +644,13 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     target_team_id: "",
     target_user_id: "",
   })
+  const [discussionThreads, setDiscussionThreads] = useState({})
+  const [discussionOpenState, setDiscussionOpenState] = useState({})
+  const [discussionLoadingState, setDiscussionLoadingState] = useState({})
+  const [discussionSubmittingState, setDiscussionSubmittingState] = useState({})
+  const [discussionDrafts, setDiscussionDrafts] = useState({})
+  const [discussionReplyDrafts, setDiscussionReplyDrafts] = useState({})
+  const [discussionReplyEditors, setDiscussionReplyEditors] = useState({})
 
   useEffect(() => {
     if (!actionMessage) {
@@ -763,6 +831,212 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       setIsLoading(false)
       setIsReady(true)
     }
+  }
+
+  async function handleAnnouncementReaction(announcementId, reactionType) {
+    const requestKey = `${announcementId}:${reactionType}`
+
+    setActionError("")
+    setAnnouncementReactionState((previous) => ({ ...previous, [requestKey]: true }))
+
+    try {
+      await apiPost(`/api/announcements/${announcementId}/reactions`, {
+        reaction_type: reactionType,
+      })
+      await refreshData()
+    } catch (error) {
+      console.error("Failed to update announcement reaction:", error)
+      setActionError(error.message || "Failed to update announcement reaction.")
+    } finally {
+      setAnnouncementReactionState((previous) => {
+        const nextState = { ...previous }
+        delete nextState[requestKey]
+        return nextState
+      })
+    }
+  }
+
+  function openAnnouncementInsights(announcement) {
+    setSelectedAnnouncement(announcement)
+    setAnnouncementInsightsOpen(true)
+  }
+
+  function getDiscussionKey(sourceType, sourceId) {
+    return `${sourceType}:${sourceId}`
+  }
+
+  async function loadDiscussionThread(sourceType, sourceId) {
+    const key = getDiscussionKey(sourceType, sourceId)
+
+    setDiscussionLoadingState((previous) => ({ ...previous, [key]: true }))
+
+    try {
+      const params = new URLSearchParams({
+        source_type: sourceType,
+        source_id: String(sourceId),
+      })
+      const payload = await apiGet(`/api/discussions/thread?${params.toString()}`)
+      setDiscussionThreads((previous) => ({
+        ...previous,
+        [key]: normalizeDiscussionThread(payload),
+      }))
+    } catch (error) {
+      setActionError(error.message || "Failed to load discussion.")
+    } finally {
+      setDiscussionLoadingState((previous) => ({ ...previous, [key]: false }))
+    }
+  }
+
+  async function toggleDiscussionPanel(sourceType, sourceId) {
+    const key = getDiscussionKey(sourceType, sourceId)
+    const nextOpen = !discussionOpenState[key]
+
+    setDiscussionOpenState((previous) => ({ ...previous, [key]: nextOpen }))
+
+    if (nextOpen && !discussionThreads[key]) {
+      await loadDiscussionThread(sourceType, sourceId)
+    }
+  }
+
+  async function handleDiscussionSubmit(sourceType, sourceId, parentCommentId = null) {
+    const key = getDiscussionKey(sourceType, sourceId)
+    const thread = discussionThreads[key]
+    const draftKey = parentCommentId ? `${key}:${parentCommentId}` : key
+    const body = parentCommentId ? discussionReplyDrafts[draftKey] : discussionDrafts[key]
+
+    if (!thread?.id || !String(body || "").trim()) {
+      return
+    }
+
+    setDiscussionSubmittingState((previous) => ({ ...previous, [draftKey]: true }))
+    setActionError("")
+
+    try {
+      await apiPost(`/api/discussions/threads/${thread.id}/comments`, {
+        body: String(body).trim(),
+        parent_comment_id: parentCommentId ? Number(parentCommentId) : null,
+      })
+
+      if (parentCommentId) {
+        setDiscussionReplyDrafts((previous) => ({ ...previous, [draftKey]: "" }))
+        setDiscussionReplyEditors((previous) => ({ ...previous, [draftKey]: false }))
+      } else {
+        setDiscussionDrafts((previous) => ({ ...previous, [key]: "" }))
+      }
+
+      await loadDiscussionThread(sourceType, sourceId)
+      setActionMessage("Discussion updated successfully.")
+    } catch (error) {
+      setActionError(error.message || "Failed to post discussion comment.")
+    } finally {
+      setDiscussionSubmittingState((previous) => ({ ...previous, [draftKey]: false }))
+    }
+  }
+
+  function renderDiscussionCommentNodes(sourceType, sourceId, comments, depth = 0) {
+    const threadKey = getDiscussionKey(sourceType, sourceId)
+
+    return comments.map((comment) => {
+      const replyKey = `${threadKey}:${comment.id}`
+      const isReplyOpen = Boolean(discussionReplyEditors[replyKey])
+
+      return (
+        <div key={comment.id} className={cn("space-y-3 rounded-lg border border-border/60 bg-background/80 p-3", depth > 0 && "ml-4")}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-foreground">{comment.authorName}</p>
+              <p className="text-xs text-muted-foreground">{formatDateTime(comment.createdAt)}</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDiscussionReplyEditors((previous) => ({ ...previous, [replyKey]: !previous[replyKey] }))}
+            >
+              <Reply className="mr-1 h-4 w-4" />
+              Reply
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{comment.body}</p>
+
+          {isReplyOpen ? (
+            <div className="space-y-2 rounded-lg border border-dashed border-border p-3">
+              <Textarea
+                value={discussionReplyDrafts[replyKey] || ""}
+                onChange={(event) => setDiscussionReplyDrafts((previous) => ({ ...previous, [replyKey]: event.target.value }))}
+                placeholder="Reply here. Use @name to mention someone."
+                rows={3}
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setDiscussionReplyEditors((previous) => ({ ...previous, [replyKey]: false }))}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={Boolean(discussionSubmittingState[replyKey])}
+                  onClick={() => handleDiscussionSubmit(sourceType, sourceId, comment.id)}
+                >
+                  <Send className="mr-1 h-4 w-4" />
+                  Reply
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          {comment.replies?.length ? (
+            <div className="space-y-3 border-l border-border/70 pl-3">
+              {renderDiscussionCommentNodes(sourceType, sourceId, comment.replies, depth + 1)}
+            </div>
+          ) : null}
+        </div>
+      )
+    })
+  }
+
+  function renderDiscussionPanel(sourceType, sourceId) {
+    const key = getDiscussionKey(sourceType, sourceId)
+    const thread = discussionThreads[key]
+    const nestedComments = nestDiscussionComments(thread?.comments || [])
+
+    return (
+      <div className="mt-3 rounded-xl border border-border bg-muted/30 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">{thread?.title || "Discussion"}</p>
+            <p className="text-xs text-muted-foreground">
+              Keep replies here so updates do not spill into WhatsApp.
+            </p>
+          </div>
+          {discussionLoadingState[key] ? <span className="text-xs text-muted-foreground">Loading...</span> : null}
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {nestedComments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No discussion yet. Start the conversation here.</p>
+          ) : (
+            renderDiscussionCommentNodes(sourceType, sourceId, nestedComments)
+          )}
+        </div>
+
+        <div className="mt-4 space-y-2">
+          <Textarea
+            value={discussionDrafts[key] || ""}
+            onChange={(event) => setDiscussionDrafts((previous) => ({ ...previous, [key]: event.target.value }))}
+            placeholder="Add a comment. Use @name to mention someone."
+            rows={3}
+          />
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              disabled={Boolean(discussionSubmittingState[key]) || thread?.isLocked}
+              onClick={() => handleDiscussionSubmit(sourceType, sourceId)}
+            >
+              <Send className="mr-1 h-4 w-4" />
+              Post Comment
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   const permissions = useMemo(() => getPermissions(currentUser?.role || "Member"), [currentUser])
@@ -1751,9 +2025,53 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                       </div>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{announcement.message}</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Button
+                        variant={announcement.viewerHasLiked ? "default" : "outline"}
+                        size="sm"
+                        disabled={Boolean(announcementReactionState[`${announcement.id}:like`])}
+                        onClick={() => handleAnnouncementReaction(announcement.id, "like")}
+                      >
+                        <Heart className="mr-1 h-4 w-4" />
+                        Like {announcement.likeCount}
+                      </Button>
+                      <Button
+                        variant={announcement.viewerHasAcknowledged ? "default" : "outline"}
+                        size="sm"
+                        disabled={Boolean(announcementReactionState[`${announcement.id}:acknowledge`])}
+                        onClick={() => handleAnnouncementReaction(announcement.id, "acknowledge")}
+                      >
+                        <CheckCheck className="mr-1 h-4 w-4" />
+                        Acknowledge {announcement.acknowledgeCount}
+                      </Button>
+                      {isMember ? (
+                        <Badge variant="secondary" className="gap-1">
+                          <Eye className="h-3.5 w-3.5" />
+                          Seen {announcement.seenCount}
+                        </Badge>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => openAnnouncementInsights(announcement)}
+                        >
+                          <Eye className="mr-1 h-4 w-4" />
+                          Seen by {announcement.seenCount}
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleDiscussionPanel("announcement", announcement.id)}
+                      >
+                        <MessageSquare className="mr-1 h-4 w-4" />
+                        {discussionOpenState[getDiscussionKey("announcement", announcement.id)] ? "Hide Discussion" : "Open Discussion"}
+                      </Button>
+                    </div>
                     <p className="mt-2 text-xs text-muted-foreground">
                       By {announcement.author} • {formatDate(announcement.createdAt)}
                     </p>
+                    {discussionOpenState[getDiscussionKey("announcement", announcement.id)] ? renderDiscussionPanel("announcement", announcement.id) : null}
                   </div>
                 ))
               )}
@@ -2164,7 +2482,16 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                             ))}
                           </DropdownMenuContent>
                         </DropdownMenu>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleDiscussionPanel("task", task.id)}
+                        >
+                          <MessageSquare className="mr-1 h-4 w-4" />
+                          {discussionOpenState[getDiscussionKey("task", task.id)] ? "Hide Discussion" : "Discuss"}
+                        </Button>
                       </div>
+                      {discussionOpenState[getDiscussionKey("task", task.id)] ? renderDiscussionPanel("task", task.id) : null}
                     </CardContent>
                   </Card>
                 ))}
@@ -3549,6 +3876,56 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
               <Button variant="outline" onClick={() => setSkillModalOpen(false)}>Cancel</Button>
               <Button onClick={handleAssignSkill}>{editingSkillId ? "Save Changes" : "Assign Skill"}</Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={announcementInsightsOpen} onOpenChange={setAnnouncementInsightsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Announcement Reactions</DialogTitle>
+              <DialogDescription>
+                {selectedAnnouncement ? selectedAnnouncement.title : "Announcement details"}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedAnnouncement ? (
+              <div className="space-y-5">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg border border-border bg-muted/40 p-4">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Likes</p>
+                    <p className="mt-2 text-2xl font-semibold text-foreground">{selectedAnnouncement.likeCount}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/40 p-4">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Acknowledged</p>
+                    <p className="mt-2 text-2xl font-semibold text-foreground">{selectedAnnouncement.acknowledgeCount}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/40 p-4">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Seen</p>
+                    <p className="mt-2 text-2xl font-semibold text-foreground">{selectedAnnouncement.seenCount}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-foreground">Seen By</p>
+                  {selectedAnnouncement.seenBy.length === 0 ? (
+                    <p className="mt-2 text-sm text-muted-foreground">No one has seen this announcement yet.</p>
+                  ) : (
+                    <div className="mt-3 max-h-72 space-y-2 overflow-y-auto">
+                      {selectedAnnouncement.seenBy.map((viewer) => (
+                        <div key={`${selectedAnnouncement.id}:${viewer.user_id}`} className="rounded-lg border border-border bg-muted/40 p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="font-medium text-foreground">{viewer.full_name}</p>
+                              <p className="text-xs text-muted-foreground">{viewer.email}</p>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{formatDateTime(viewer.reacted_at)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </DialogContent>
         </Dialog>
 

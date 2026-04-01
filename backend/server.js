@@ -17,6 +17,7 @@ const announcementsRoutes = require("./routes/announcementsRoutes");
 const remindersRoutes = require("./routes/remindersRoutes");
 const notificationsRoutes = require("./routes/notificationsRoutes");
 const activityLogsRoutes = require("./routes/activityLogsRoutes");
+const discussionsRoutes = require("./routes/discussionsRoutes");
 const { authenticateToken } = require("./middleware/authMiddleware");
 const { initSocket } = require("./socket");
 
@@ -49,6 +50,7 @@ app.use("/api/weekly-skills", authenticateToken, skillsRoutes);
 app.use("/api/announcements", authenticateToken, announcementsRoutes);
 app.use("/api/reminders", authenticateToken, remindersRoutes);
 app.use("/api/notifications", authenticateToken, notificationsRoutes);
+app.use("/api/discussions", authenticateToken, discussionsRoutes);
 app.use("/api/activity-logs", authenticateToken, activityLogsRoutes);
 
 app.use((req, res) => {
