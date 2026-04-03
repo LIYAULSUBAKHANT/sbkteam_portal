@@ -3,6 +3,18 @@ const { logActivity } = require("./activityLogController");
 const { emitDataChanged } = require("../socket");
 const { ensureDiscussionThread } = require("../services/discussionsService");
 
+let hasCompletedAtColumnCache = null;
+
+async function hasCompletedAtColumn() {
+  if (hasCompletedAtColumnCache !== null) {
+    return hasCompletedAtColumnCache;
+  }
+
+  const [rows] = await db.execute("SHOW COLUMNS FROM tasks LIKE 'completed_at'");
+  hasCompletedAtColumnCache = rows.length > 0;
+  return hasCompletedAtColumnCache;
+}
+
 async function createTask(req, res) {
   try {
     const { project_id, assigned_to_user_id, member_ids, title, description, status, priority, due_date } = req.body;
@@ -91,6 +103,7 @@ async function createTask(req, res) {
 
 async function getTasks(req, res) {
   try {
+    const supportsCompletionHistory = await hasCompletedAtColumn();
     const isMember = req.user.roleKey === "member";
     const values = [];
     let whereClause = "";
@@ -108,7 +121,7 @@ async function getTasks(req, res) {
         t.status,
         t.priority,
         t.due_date,
-        t.completed_at,
+        ${supportsCompletionHistory ? "t.completed_at" : "NULL AS completed_at"},
         t.project_id,
         p.name AS project_name,
         t.assigned_to_user_id,
@@ -134,6 +147,7 @@ async function getTasks(req, res) {
 
 async function updateTaskStatus(req, res) {
   try {
+    const supportsCompletionHistory = await hasCompletedAtColumn();
     const { id } = req.params;
     const { status } = req.body;
 
@@ -156,17 +170,24 @@ async function updateTaskStatus(req, res) {
       return res.status(403).json({ message: "Members can only update their own tasks." });
     }
 
-    await db.execute(
-      `UPDATE tasks
-       SET status = ?,
-           completed_at = CASE
-             WHEN ? = 'Done' THEN COALESCE(completed_at, NOW())
-             WHEN ? <> 'Done' THEN NULL
-             ELSE completed_at
-           END
-       WHERE id = ?`,
-      [status, status, status, id]
-    );
+    if (supportsCompletionHistory) {
+      await db.execute(
+        `UPDATE tasks
+         SET status = ?,
+             completed_at = CASE
+               WHEN ? = 'Done' THEN COALESCE(completed_at, NOW())
+               WHEN ? <> 'Done' THEN NULL
+               ELSE completed_at
+             END
+         WHERE id = ?`,
+        [status, status, status, id]
+      );
+    } else {
+      await db.execute(
+        "UPDATE tasks SET status = ? WHERE id = ?",
+        [status, id]
+      );
+    }
 
     await logActivity({
       userId: req.user.id,
@@ -186,6 +207,7 @@ async function updateTaskStatus(req, res) {
 
 async function updateTask(req, res) {
   try {
+    const supportsCompletionHistory = await hasCompletedAtColumn();
     const { id } = req.params;
     const { project_id, assigned_to_user_id, title, description, status, priority, due_date } = req.body;
 
@@ -198,35 +220,59 @@ async function updateTask(req, res) {
       return res.status(404).json({ message: "Task not found." });
     }
 
-    await db.execute(
-      `UPDATE tasks
-       SET project_id = COALESCE(?, project_id),
-           assigned_to_user_id = COALESCE(?, assigned_to_user_id),
-           title = COALESCE(?, title),
-           description = COALESCE(?, description),
-           status = COALESCE(?, status),
-           priority = COALESCE(?, priority),
-           due_date = COALESCE(?, due_date),
-           completed_at = CASE
-             WHEN COALESCE(?, status) = 'Done' THEN COALESCE(completed_at, NOW())
-             WHEN ? IS NOT NULL AND ? <> 'Done' THEN NULL
-             ELSE completed_at
-           END
-       WHERE id = ?`,
-      [
-        project_id || null,
-        assigned_to_user_id || null,
-        title || null,
-        description || null,
-        status || null,
-        priority || null,
-        due_date || null,
-        status || null,
-        status || null,
-        status || null,
-        id
-      ]
-    );
+    if (supportsCompletionHistory) {
+      await db.execute(
+        `UPDATE tasks
+         SET project_id = COALESCE(?, project_id),
+             assigned_to_user_id = COALESCE(?, assigned_to_user_id),
+             title = COALESCE(?, title),
+             description = COALESCE(?, description),
+             status = COALESCE(?, status),
+             priority = COALESCE(?, priority),
+             due_date = COALESCE(?, due_date),
+             completed_at = CASE
+               WHEN COALESCE(?, status) = 'Done' THEN COALESCE(completed_at, NOW())
+               WHEN ? IS NOT NULL AND ? <> 'Done' THEN NULL
+               ELSE completed_at
+             END
+         WHERE id = ?`,
+        [
+          project_id || null,
+          assigned_to_user_id || null,
+          title || null,
+          description || null,
+          status || null,
+          priority || null,
+          due_date || null,
+          status || null,
+          status || null,
+          status || null,
+          id
+        ]
+      );
+    } else {
+      await db.execute(
+        `UPDATE tasks
+         SET project_id = COALESCE(?, project_id),
+             assigned_to_user_id = COALESCE(?, assigned_to_user_id),
+             title = COALESCE(?, title),
+             description = COALESCE(?, description),
+             status = COALESCE(?, status),
+             priority = COALESCE(?, priority),
+             due_date = COALESCE(?, due_date)
+         WHERE id = ?`,
+        [
+          project_id || null,
+          assigned_to_user_id || null,
+          title || null,
+          description || null,
+          status || null,
+          priority || null,
+          due_date || null,
+          id
+        ]
+      );
+    }
 
     await ensureDiscussionThread({
       sourceType: "task",
