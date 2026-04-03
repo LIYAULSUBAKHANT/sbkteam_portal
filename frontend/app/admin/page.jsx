@@ -3076,25 +3076,25 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
 
         <div className="overflow-hidden rounded-[28px] border border-border bg-[linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted))/0.65,hsl(var(--background)))] shadow-sm dark:border-slate-800 dark:bg-[linear-gradient(135deg,#111827,#0f172a_55%,#020617)] dark:shadow-[0_32px_80px_rgba(2,6,23,0.55)]">
           <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-rose-400/20 bg-card/80 px-4 py-3 dark:bg-slate-950/80">
-              <p className="text-[11px] uppercase tracking-[0.26em] text-rose-200/75">Overdue</p>
+            <div className="rounded-2xl border border-rose-400/25 bg-card/90 px-4 py-3 shadow-sm dark:bg-slate-950/80">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-rose-700 dark:text-rose-200/75">Overdue</p>
               <p className="mt-2 text-3xl font-semibold text-foreground dark:text-white">{overdueTasks.length}</p>
-              <p className="mt-1 text-xs text-rose-600 dark:text-rose-100/75">Need immediate attention</p>
+              <p className="mt-1 text-xs font-medium text-rose-600 dark:text-rose-100/75">Need immediate attention</p>
             </div>
-            <div className="rounded-2xl border border-orange-400/20 bg-card/80 px-4 py-3 dark:bg-slate-950/80">
-              <p className="text-[11px] uppercase tracking-[0.26em] text-orange-200/75">Due Today</p>
+            <div className="rounded-2xl border border-orange-400/25 bg-card/90 px-4 py-3 shadow-sm dark:bg-slate-950/80">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-orange-700 dark:text-orange-200/75">Due Today</p>
               <p className="mt-2 text-3xl font-semibold text-foreground dark:text-white">{dueTodayTasks.length}</p>
-              <p className="mt-1 text-xs text-orange-600 dark:text-orange-100/75">Should close before day end</p>
+              <p className="mt-1 text-xs font-medium text-orange-600 dark:text-orange-100/75">Should close before day end</p>
             </div>
-            <div className="rounded-2xl border border-amber-300/20 bg-card/80 px-4 py-3 dark:bg-slate-950/80">
-              <p className="text-[11px] uppercase tracking-[0.26em] text-amber-100/75">Due Soon</p>
+            <div className="rounded-2xl border border-amber-300/30 bg-card/90 px-4 py-3 shadow-sm dark:bg-slate-950/80">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-amber-700 dark:text-amber-100/75">Due Soon</p>
               <p className="mt-2 text-3xl font-semibold text-foreground dark:text-white">{dueSoonTasks.length}</p>
-              <p className="mt-1 text-xs text-amber-700 dark:text-amber-100/75">Next two days pipeline</p>
+              <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-100/75">Next two days pipeline</p>
             </div>
-            <div className="rounded-2xl border border-emerald-400/20 bg-card/80 px-4 py-3 dark:bg-slate-950/80">
-              <p className="text-[11px] uppercase tracking-[0.26em] text-emerald-100/75">Task Archive</p>
+            <div className="rounded-2xl border border-emerald-400/25 bg-card/90 px-4 py-3 shadow-sm dark:bg-slate-950/80">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-emerald-700 dark:text-emerald-100/75">Task Archive</p>
               <p className="mt-2 text-3xl font-semibold text-foreground dark:text-white">{completedTasksHistory.length}</p>
-              <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-100/75">Finished work stays reviewable</p>
+              <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-100/75">Finished work stays reviewable</p>
             </div>
           </div>
         </div>
@@ -3435,16 +3435,16 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
 
         <div className="overflow-hidden rounded-[28px] border border-sky-500/20 bg-[linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted))/0.7,hsl(var(--background)))] shadow-sm dark:bg-[linear-gradient(135deg,#0f172a,#0b1b34_58%,#082f49)] dark:shadow-[0_28px_70px_rgba(2,6,23,0.45)]">
           <div className="grid gap-3 p-5 sm:grid-cols-3">
-            <div className="rounded-2xl border border-emerald-400/20 bg-card/80 p-5 dark:bg-slate-950/70">
-              <p className="text-[11px] uppercase tracking-[0.26em] text-emerald-200/70">Completed</p>
+            <div className="rounded-2xl border border-emerald-400/25 bg-card/90 p-5 shadow-sm dark:bg-slate-950/70">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-emerald-700 dark:text-emerald-200/70">Completed</p>
               <p className="mt-3 text-3xl font-semibold text-foreground dark:text-white">{visibleSkills.filter((skill) => skill.status === "Completed").length}</p>
             </div>
-            <div className="rounded-2xl border border-sky-400/20 bg-card/80 p-5 dark:bg-slate-950/70">
-              <p className="text-[11px] uppercase tracking-[0.26em] text-sky-200/70">In Progress</p>
+            <div className="rounded-2xl border border-sky-400/25 bg-card/90 p-5 shadow-sm dark:bg-slate-950/70">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-sky-700 dark:text-sky-200/70">In Progress</p>
               <p className="mt-3 text-3xl font-semibold text-foreground dark:text-white">{visibleSkills.filter((skill) => skill.status === "In Progress").length}</p>
             </div>
-            <div className="rounded-2xl border border-amber-300/20 bg-card/80 p-5 dark:bg-slate-950/70">
-              <p className="text-[11px] uppercase tracking-[0.26em] text-amber-100/70">Pending</p>
+            <div className="rounded-2xl border border-amber-300/30 bg-card/90 p-5 shadow-sm dark:bg-slate-950/70">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-amber-700 dark:text-amber-100/70">Pending</p>
               <p className="mt-3 text-3xl font-semibold text-foreground dark:text-white">{visibleSkills.filter((skill) => skill.status === "Pending").length}</p>
             </div>
           </div>
@@ -3458,9 +3458,9 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   <Avatar className="h-10 w-10">
                     <AvatarFallback className="bg-sky-400/15 text-sky-200">{member.avatar}</AvatarFallback>
                   </Avatar>
-                  <div>
-                    <CardTitle className="text-base font-semibold text-foreground dark:text-white">{member.name}</CardTitle>
-                    <div className="mt-1 flex items-center gap-1.5 text-xs text-sky-300">
+                    <div>
+                      <CardTitle className="text-base font-semibold text-foreground dark:text-white">{member.name}</CardTitle>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-sky-700 dark:text-sky-300">
                       {(() => {
                         const MemberRoleIcon = roleIcons[member.role] || Circle
                         return <MemberRoleIcon className="h-3.5 w-3.5" />
@@ -3503,9 +3503,9 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                       <div className="mb-3 flex items-center justify-between">
                         <Badge className={cn(
                           "border",
-                          skill.status === "Completed" && "border-emerald-400/25 bg-emerald-400/12 text-emerald-200",
-                          skill.status === "In Progress" && "border-sky-400/25 bg-sky-400/12 text-sky-200",
-                          skill.status === "Pending" && "border-amber-300/25 bg-amber-300/12 text-amber-100"
+                          skill.status === "Completed" && "border-emerald-400/25 bg-emerald-400/12 text-emerald-700 dark:text-emerald-200",
+                          skill.status === "In Progress" && "border-sky-400/25 bg-sky-400/12 text-sky-700 dark:text-sky-200",
+                          skill.status === "Pending" && "border-amber-300/25 bg-amber-300/12 text-amber-700 dark:text-amber-100"
                         )}>
                           {skill.status}
                         </Badge>
@@ -3721,7 +3721,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
             <CardContent className="space-y-6">
               <div className="grid gap-4 md:grid-cols-3">
                 {spotlightRingData.map((item) => (
-                  <div key={item.key} className="rounded-[24px] border border-border bg-background/70 p-4 text-center dark:border-white/10 dark:bg-white/5">
+                  <div key={item.key} className="rounded-[24px] border border-border bg-background/80 p-4 text-center shadow-sm dark:border-white/10 dark:bg-white/5">
                     <ChartContainer
                       className="mx-auto max-w-[180px]"
                       config={{
@@ -3775,35 +3775,35 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
             </CardHeader>
             <CardContent className="space-y-3">
               {insightMessages.map((message) => (
-                <div key={message} className="rounded-2xl border border-border bg-background/70 p-4 text-sm leading-6 text-foreground dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
+                <div key={message} className="rounded-2xl border border-border bg-background/80 p-4 text-sm leading-6 text-foreground shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
                   {message}
                 </div>
               ))}
-              <div className="rounded-[24px] border border-emerald-400/15 bg-emerald-400/10 p-5">
+              <div className="rounded-[24px] border border-emerald-400/20 bg-emerald-50 p-5 dark:bg-emerald-400/10">
                 <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-emerald-100/75">Your Activity</span>
-                  <span className="font-medium text-white">{currentUser?.activity_points || 0}</span>
+                  <span className="text-emerald-700 dark:text-emerald-100/75">Your Activity</span>
+                  <span className="font-medium text-emerald-900 dark:text-white">{currentUser?.activity_points || 0}</span>
                 </div>
                 <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-emerald-100/75">{cohortLabel === "overall" ? "Average" : `${cohortLabel[0].toUpperCase()}${cohortLabel.slice(1)} Average`}</span>
-                  <span className="font-medium text-white">{cohortAverageActivity}</span>
+                  <span className="text-emerald-700 dark:text-emerald-100/75">{cohortLabel === "overall" ? "Average" : `${cohortLabel[0].toUpperCase()}${cohortLabel.slice(1)} Average`}</span>
+                  <span className="font-medium text-emerald-900 dark:text-white">{cohortAverageActivity}</span>
                 </div>
                 <Progress
                   value={cohortAverageActivity ? Math.min(((currentUser?.activity_points || 0) / cohortAverageActivity) * 100, 100) : 0}
                   className="h-2"
                 />
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl bg-slate-950/40 p-3">
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-100/65">Rank</p>
-                    <p className="mt-2 text-2xl font-semibold text-white">#{currentRank > 0 ? currentRank : "-"}</p>
+                  <div className="rounded-xl border border-emerald-200 bg-white/75 p-3 dark:border-transparent dark:bg-slate-950/40">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-100/65">Rank</p>
+                    <p className="mt-2 text-2xl font-semibold text-emerald-950 dark:text-white">#{currentRank > 0 ? currentRank : "-"}</p>
                   </div>
-                  <div className="rounded-xl bg-slate-950/40 p-3">
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-100/65">Next Gap</p>
-                    <p className="mt-2 text-2xl font-semibold text-white">{pointsToNextRank}</p>
+                  <div className="rounded-xl border border-emerald-200 bg-white/75 p-3 dark:border-transparent dark:bg-slate-950/40">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-100/65">Next Gap</p>
+                    <p className="mt-2 text-2xl font-semibold text-emerald-950 dark:text-white">{pointsToNextRank}</p>
                   </div>
-                  <div className="rounded-xl bg-slate-950/40 p-3">
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-100/65">Leader</p>
-                    <p className="mt-2 text-2xl font-semibold text-white">{leaderPoints}</p>
+                  <div className="rounded-xl border border-emerald-200 bg-white/75 p-3 dark:border-transparent dark:bg-slate-950/40">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-100/65">Leader</p>
+                    <p className="mt-2 text-2xl font-semibold text-emerald-950 dark:text-white">{leaderPoints}</p>
                   </div>
                 </div>
               </div>
@@ -3829,9 +3829,9 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                     </div>
                     <Badge className={cn(
                       "border",
-                      skill.status === "Completed" && "border-emerald-400/25 bg-emerald-400/12 text-emerald-200",
-                      skill.status === "In Progress" && "border-sky-400/25 bg-sky-400/12 text-sky-200",
-                      skill.status === "Pending" && "border-amber-300/25 bg-amber-300/12 text-amber-100"
+                      skill.status === "Completed" && "border-emerald-400/25 bg-emerald-400/12 text-emerald-700 dark:text-emerald-200",
+                      skill.status === "In Progress" && "border-sky-400/25 bg-sky-400/12 text-sky-700 dark:text-sky-200",
+                      skill.status === "Pending" && "border-amber-300/25 bg-amber-300/12 text-amber-700 dark:text-amber-100"
                     )}>
                       {skill.status}
                     </Badge>
@@ -3856,19 +3856,19 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                       <div
                         key={member.id}
                         className={cn(
-                          "rounded-2xl border px-4 py-4",
-                          index === 0 && "border-yellow-400/25 bg-yellow-400/10",
-                          index === 1 && "border-slate-300/20 bg-slate-300/10",
-                          index === 2 && "border-orange-300/20 bg-orange-300/10"
+                          "rounded-2xl border px-4 py-4 shadow-sm",
+                          index === 0 && "border-yellow-400/25 bg-yellow-50 dark:bg-yellow-400/10",
+                          index === 1 && "border-slate-300/40 bg-slate-100/80 dark:bg-slate-300/10",
+                          index === 2 && "border-orange-300/30 bg-orange-50 dark:bg-orange-300/10"
                         )}
                       >
-                        <p className="text-[11px] uppercase tracking-[0.3em] text-slate-300">Rank {member.rank}</p>
-                        <p className="mt-3 truncate text-lg font-semibold text-white">{member.name}</p>
-                        <p className="mt-1 text-sm text-slate-300">{member.points} activity points</p>
+                        <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground dark:text-slate-300">Rank {member.rank}</p>
+                        <p className="mt-3 truncate text-lg font-semibold text-foreground dark:text-white">{member.name}</p>
+                        <p className="mt-1 text-sm text-muted-foreground dark:text-slate-300">{member.points} activity points</p>
                       </div>
                     ))}
                   </div>
-                  <div className="rounded-[28px] border border-white/10 bg-slate-950/80 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                  <div className="rounded-[28px] border border-border bg-[linear-gradient(145deg,hsl(var(--background)),hsl(var(--muted))/0.85,hsl(var(--card)))] p-5 shadow-sm dark:border-white/10 dark:bg-slate-950/80 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                     <ChartContainer
                       className="w-full"
                       config={{
@@ -3881,36 +3881,36 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                       style={{ height: Math.max(400, performanceShowcaseData.length * 54) }}
                     >
                       <BarChart data={performanceShowcaseData} layout="vertical" margin={{ left: 12, right: 30, top: 12, bottom: 12 }} barCategoryGap={14}>
-                        <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" />
-                        <XAxis type="number" tickLine={false} axisLine={false} tick={{ fill: "#94a3b8", fontSize: 12 }} />
+                        <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis type="number" tickLine={false} axisLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
                         <YAxis
                           type="category"
                           dataKey="chartLabel"
                           width={132}
                           tickLine={false}
                           axisLine={false}
-                          tick={{ fill: "#e2e8f0", fontSize: 12, fontWeight: 500 }}
+                          tick={{ fill: "hsl(var(--foreground))", fontSize: 12, fontWeight: 500 }}
                         />
-                        <ReferenceLine x={cohortAverageActivity} stroke="rgba(255,255,255,0.45)" strokeDasharray="5 5" />
+                        <ReferenceLine x={cohortAverageActivity} stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" />
                         <ChartTooltip
-                          cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                          cursor={{ fill: "hsl(var(--muted) / 0.35)" }}
                           content={(
                             <ChartTooltipContent
                               hideLabel
                               formatter={(value, _name, item) => (
                                 <div className="flex min-w-[12rem] items-center justify-between gap-4">
                                   <div>
-                                    <p className="font-medium text-white">{item?.payload?.name || "Member"}</p>
-                                    <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Rank {item?.payload?.rank || "-"}</p>
+                                    <p className="font-medium text-foreground">{item?.payload?.name || "Member"}</p>
+                                    <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Rank {item?.payload?.rank || "-"}</p>
                                   </div>
-                                  <span className="font-mono text-white">{value} pts</span>
+                                  <span className="font-mono text-foreground">{value} pts</span>
                                 </div>
                               )}
                             />
                           )}
                         />
                         <Bar dataKey="points" radius={12} barSize={28}>
-                          <LabelList dataKey="points" position="right" fill="#f8fafc" fontSize={12} />
+                          <LabelList dataKey="points" position="right" fill="hsl(var(--foreground))" fontSize={12} />
                           {performanceShowcaseData.map((entry) => (
                             <Cell key={entry.id} fill={entry.fill} />
                           ))}
@@ -3919,20 +3919,20 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                     </ChartContainer>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-[11px] uppercase tracking-[0.26em] text-slate-400">Average Marker</p>
-                      <p className="mt-2 text-2xl font-semibold text-white">{cohortAverageActivity}</p>
-                      <p className="mt-1 text-xs text-slate-400">Shown as dashed line inside the chart.</p>
+                    <div className="rounded-2xl border border-border bg-background/80 p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
+                      <p className="text-[11px] uppercase tracking-[0.26em] text-muted-foreground dark:text-slate-400">Average Marker</p>
+                      <p className="mt-2 text-2xl font-semibold text-foreground dark:text-white">{cohortAverageActivity}</p>
+                      <p className="mt-1 text-xs text-muted-foreground dark:text-slate-400">Shown as dashed line inside the chart.</p>
                     </div>
-                    <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
-                      <p className="text-[11px] uppercase tracking-[0.26em] text-emerald-100/80">Your Position</p>
-                      <p className="mt-2 text-2xl font-semibold text-white">#{currentRank > 0 ? currentRank : "-"}</p>
-                      <p className="mt-1 text-xs text-emerald-100/75">Highlighted in green across the arena.</p>
+                    <div className="rounded-2xl border border-emerald-400/25 bg-emerald-50 p-4 shadow-sm dark:bg-emerald-400/10">
+                      <p className="text-[11px] uppercase tracking-[0.26em] text-emerald-700 dark:text-emerald-100/80">Your Position</p>
+                      <p className="mt-2 text-2xl font-semibold text-emerald-950 dark:text-white">#{currentRank > 0 ? currentRank : "-"}</p>
+                      <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-100/75">Highlighted in green across the arena.</p>
                     </div>
-                    <div className="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4">
-                      <p className="text-[11px] uppercase tracking-[0.26em] text-sky-100/80">Next Target</p>
-                      <p className="mt-2 text-2xl font-semibold text-white">{pointsToNextRank}</p>
-                      <p className="mt-1 text-xs text-sky-100/75">Points needed to climb one more rank.</p>
+                    <div className="rounded-2xl border border-sky-400/25 bg-sky-50 p-4 shadow-sm dark:bg-sky-400/10">
+                      <p className="text-[11px] uppercase tracking-[0.26em] text-sky-700 dark:text-sky-100/80">Next Target</p>
+                      <p className="mt-2 text-2xl font-semibold text-sky-950 dark:text-white">{pointsToNextRank}</p>
+                      <p className="mt-1 text-xs text-sky-700 dark:text-sky-100/75">Points needed to climb one more rank.</p>
                     </div>
                   </div>
                 </>
