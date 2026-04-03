@@ -42,7 +42,7 @@ import {
   X,
   Zap,
 } from "lucide-react"
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, PolarAngleAxis, RadialBar, RadialBarChart, ReferenceLine, XAxis, YAxis } from "recharts"
 import { toast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -228,27 +228,30 @@ function getDayDifferenceFromToday(value) {
 function getTaskStatusClasses(status) {
   if (status === "Done") {
     return {
-      column: "border border-emerald-500/25 bg-emerald-500/10 text-emerald-100 shadow-[0_0_0_1px_rgba(16,185,129,0.05),0_18px_40px_rgba(5,150,105,0.18)]",
-      card: "border-emerald-500/30 bg-gradient-to-br from-emerald-500/18 via-emerald-500/8 to-slate-950 shadow-[0_24px_60px_rgba(5,150,105,0.18)]",
-      badge: "border-emerald-400/30 bg-emerald-400/15 text-emerald-100",
+      column: "border border-emerald-400/25 bg-slate-900 text-emerald-100 shadow-[0_16px_34px_rgba(15,23,42,0.32)]",
+      card: "border border-slate-700/80 bg-slate-900 shadow-[0_18px_42px_rgba(2,6,23,0.36)]",
+      badge: "border-emerald-400/25 bg-emerald-400/12 text-emerald-200",
       icon: "text-emerald-300",
+      rail: "from-emerald-400 via-emerald-300 to-teal-300",
     }
   }
 
   if (status === "In Progress") {
     return {
-      column: "border border-sky-500/25 bg-sky-500/10 text-sky-100 shadow-[0_0_0_1px_rgba(14,165,233,0.05),0_18px_40px_rgba(14,165,233,0.16)]",
-      card: "border-sky-500/30 bg-gradient-to-br from-sky-500/18 via-sky-500/8 to-slate-950 shadow-[0_24px_60px_rgba(14,165,233,0.18)]",
-      badge: "border-sky-400/30 bg-sky-400/15 text-sky-100",
+      column: "border border-sky-400/25 bg-slate-900 text-sky-100 shadow-[0_16px_34px_rgba(15,23,42,0.32)]",
+      card: "border border-slate-700/80 bg-slate-900 shadow-[0_18px_42px_rgba(2,6,23,0.36)]",
+      badge: "border-sky-400/25 bg-sky-400/12 text-sky-200",
       icon: "text-sky-300",
+      rail: "from-sky-400 via-cyan-300 to-blue-300",
     }
   }
 
   return {
-    column: "border border-amber-500/25 bg-amber-500/10 text-amber-100 shadow-[0_0_0_1px_rgba(245,158,11,0.05),0_18px_40px_rgba(245,158,11,0.16)]",
-    card: "border-amber-500/30 bg-gradient-to-br from-amber-500/18 via-amber-500/8 to-slate-950 shadow-[0_24px_60px_rgba(245,158,11,0.18)]",
-    badge: "border-amber-400/30 bg-amber-400/15 text-amber-100",
+    column: "border border-amber-400/25 bg-slate-900 text-amber-100 shadow-[0_16px_34px_rgba(15,23,42,0.32)]",
+    card: "border border-slate-700/80 bg-slate-900 shadow-[0_18px_42px_rgba(2,6,23,0.36)]",
+    badge: "border-amber-400/25 bg-amber-400/12 text-amber-200",
     icon: "text-amber-300",
+    rail: "from-amber-300 via-yellow-300 to-orange-300",
   }
 }
 
@@ -311,6 +314,18 @@ function getUrgencyBadgeClasses(tone) {
   if (tone === "done") return "border-emerald-400/30 bg-emerald-400/15 text-emerald-100"
   if (tone === "upcoming") return "border-slate-400/30 bg-slate-400/15 text-slate-100"
   return "border-border/60 bg-white/5 text-slate-300"
+}
+
+function getTaskPriorityClasses(priority) {
+  if (priority === "High") {
+    return "border-rose-400/30 bg-rose-400/12 text-rose-100"
+  }
+
+  if (priority === "Medium") {
+    return "border-amber-400/30 bg-amber-400/12 text-amber-100"
+  }
+
+  return "border-sky-400/30 bg-sky-400/12 text-sky-100"
 }
 
 function formatRelativeTime(value) {
@@ -2819,32 +2834,32 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(34,197,94,0.18),transparent_32%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_30%),linear-gradient(135deg,rgba(15,23,42,0.96),rgba(2,6,23,0.92))] shadow-[0_32px_80px_rgba(2,6,23,0.55)]">
+        <div className="overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(135deg,#111827,#0f172a_55%,#020617)] shadow-[0_32px_80px_rgba(2,6,23,0.55)]">
           <div className="flex flex-col gap-6 p-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <p className="text-xs uppercase tracking-[0.32em] text-emerald-300/80">Task Control Center</p>
-              <h3 className="mt-3 text-3xl font-semibold tracking-tight text-white">Clean status flow with instant urgency visibility</h3>
+              <p className="text-xs uppercase tracking-[0.32em] text-emerald-300/80">Task Command Desk</p>
+              <h3 className="mt-3 text-3xl font-semibold tracking-tight text-white">Professional task tracking with clearer priority and better readability</h3>
               <p className="mt-3 text-sm leading-6 text-slate-300">
-                Pending, active, and completed work now sits inside a stronger dark dashboard with deadline pressure highlighted immediately.
+                High-contrast task monitoring built for real daily use. Urgent work stands out first, while every card stays readable without washed-out colors.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 backdrop-blur">
+              <div className="rounded-2xl border border-rose-400/20 bg-slate-950/80 px-4 py-3">
                 <p className="text-[11px] uppercase tracking-[0.26em] text-rose-200/75">Overdue</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{overdueTasks.length}</p>
                 <p className="mt-1 text-xs text-rose-100/75">Need immediate attention</p>
               </div>
-              <div className="rounded-2xl border border-orange-400/20 bg-orange-400/10 px-4 py-3 backdrop-blur">
+              <div className="rounded-2xl border border-orange-400/20 bg-slate-950/80 px-4 py-3">
                 <p className="text-[11px] uppercase tracking-[0.26em] text-orange-200/75">Due Today</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{dueTodayTasks.length}</p>
                 <p className="mt-1 text-xs text-orange-100/75">Should close before day end</p>
               </div>
-              <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 backdrop-blur">
+              <div className="rounded-2xl border border-amber-300/20 bg-slate-950/80 px-4 py-3">
                 <p className="text-[11px] uppercase tracking-[0.26em] text-amber-100/75">Due Soon</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{dueSoonTasks.length}</p>
                 <p className="mt-1 text-xs text-amber-100/75">Next two days pipeline</p>
               </div>
-              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 backdrop-blur">
+              <div className="rounded-2xl border border-emerald-400/20 bg-slate-950/80 px-4 py-3">
                 <p className="text-[11px] uppercase tracking-[0.26em] text-emerald-100/75">Done Archive</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{groupedTasks.Done.length}</p>
                 <p className="mt-1 text-xs text-emerald-100/75">Completed work stays reviewable</p>
@@ -2859,7 +2874,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
 
             return (
             <div key={status} className="space-y-4">
-              <div className={cn("flex items-center gap-2 rounded-lg p-3", statusClasses.column)}>
+              <div className={cn("flex items-center gap-2 rounded-2xl px-4 py-3", statusClasses.column)}>
                 {status === "Pending" ? <Circle className={cn("h-4 w-4", statusClasses.icon)} /> : null}
                 {status === "In Progress" ? <AlertCircle className={cn("h-4 w-4", statusClasses.icon)} /> : null}
                 {status === "Done" ? <CheckCircle2 className={cn("h-4 w-4", statusClasses.icon)} /> : null}
@@ -2876,6 +2891,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
 
                   return (
                   <Card key={task.id} className={cn("overflow-hidden rounded-[24px] border shadow-sm transition-transform duration-200 hover:-translate-y-1", taskStatusClasses.card)}>
+                    <div className={cn("h-1.5 w-full bg-gradient-to-r", taskStatusClasses.rail)} />
                     <CardContent className="p-5">
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
@@ -2886,10 +2902,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                           <p className="mt-2 text-xs text-slate-300">{urgency.detail}</p>
                         </div>
                         <div className="flex flex-wrap justify-end gap-2">
-                          <Badge
-                            variant={task.priority === "High" ? "destructive" : task.priority === "Medium" ? "secondary" : "outline"}
-                            className="text-xs"
-                          >
+                          <Badge className={cn("border text-xs", getTaskPriorityClasses(task.priority))}>
                             {task.priority}
                           </Badge>
                           <Badge className={cn("border text-[11px]", getUrgencyBadgeClasses(urgency.tone))}>
@@ -3215,6 +3228,15 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
         ? `You are performing above the ${cohortLabel} activity average.`
         : `You are ${cohortAverageActivity - (currentUser?.activity_points || 0)} point${cohortAverageActivity - (currentUser?.activity_points || 0) === 1 ? "" : "s"} below the ${cohortLabel} activity average.`,
     ]
+    const leaderPoints = rankedPool[0]?.activity_points || 0
+    const activityVsLeader = leaderPoints ? Math.min(Math.round(((currentUser?.activity_points || 0) / leaderPoints) * 100), 100) : 0
+    const activityVsAverage = cohortAverageActivity ? Math.min(Math.round(((currentUser?.activity_points || 0) / cohortAverageActivity) * 100), 100) : 0
+    const executionScore = Math.round((taskProgress * 0.6) + (skillProgress * 0.4))
+    const spotlightRingData = [
+      { key: "leader", label: "Vs Leader", value: activityVsLeader, fill: "var(--color-leader)" },
+      { key: "average", label: "Vs Average", value: activityVsAverage, fill: "var(--color-average)" },
+      { key: "execution", label: "Execution", value: executionScore, fill: "var(--color-execution)" },
+    ]
 
     return (
       <div className="space-y-6">
@@ -3249,56 +3271,100 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           </Card>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
-          <Card className="border border-border shadow-sm">
+        <div className="grid gap-6 lg:grid-cols-[0.95fr,1.05fr]">
+          <Card className="overflow-hidden border-white/10 bg-[linear-gradient(145deg,#111827,#0f172a_52%,#020617)] shadow-[0_26px_60px_rgba(2,6,23,0.46)]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold text-foreground">Weekly Progress</CardTitle>
-              <CardDescription>Completion progress across assigned tasks and skills</CardDescription>
+              <CardTitle className="text-xl font-semibold text-white">Performance Spotlight</CardTitle>
+              <CardDescription className="text-slate-300">Three quick gauges for competitive standing, consistency, and execution quality.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-foreground">Tasks Completed</span>
-                  <span className="text-muted-foreground">{completedTasks}/{userTasks.length || 0}</span>
-                </div>
-                <Progress value={taskProgress} className="h-2" />
-                <p className="text-xs text-muted-foreground">{taskProgress}% completion rate for assigned tasks</p>
+              <div className="grid gap-4 md:grid-cols-3">
+                {spotlightRingData.map((item) => (
+                  <div key={item.key} className="rounded-[24px] border border-white/10 bg-white/5 p-4 text-center">
+                    <ChartContainer
+                      className="mx-auto max-w-[180px]"
+                      config={{
+                        leader: { label: "Vs Leader", color: "#22c55e" },
+                        average: { label: "Vs Average", color: "#38bdf8" },
+                        execution: { label: "Execution", color: "#f59e0b" },
+                      }}
+                      style={{ height: 170 }}
+                    >
+                      <RadialBarChart
+                        data={[item]}
+                        innerRadius="68%"
+                        outerRadius="100%"
+                        startAngle={90}
+                        endAngle={-270}
+                      >
+                        <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                        <RadialBar dataKey="value" background clockWise cornerRadius={16} />
+                      </RadialBarChart>
+                    </ChartContainer>
+                    <p className="mt-2 text-[11px] uppercase tracking-[0.24em] text-slate-400">{item.label}</p>
+                    <p className="mt-2 text-3xl font-semibold text-white">{item.value}%</p>
+                  </div>
+                ))}
               </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-foreground">Skills Completed</span>
-                  <span className="text-muted-foreground">{completedUserSkills}/{userSkills.length || 0}</span>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-white">Tasks Completed</span>
+                    <span className="text-slate-400">{completedTasks}/{userTasks.length || 0}</span>
+                  </div>
+                  <Progress value={taskProgress} className="mt-3 h-2" />
+                  <p className="mt-3 text-xs text-slate-400">{taskProgress}% completion rate for assigned tasks</p>
                 </div>
-                <Progress value={skillProgress} className="h-2" />
-                <p className="text-xs text-muted-foreground">{skillProgress}% completion rate for assigned skills</p>
+                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-white">Skills Completed</span>
+                    <span className="text-slate-400">{completedUserSkills}/{userSkills.length || 0}</span>
+                  </div>
+                  <Progress value={skillProgress} className="mt-3 h-2" />
+                  <p className="mt-3 text-xs text-slate-400">{skillProgress}% completion rate for assigned skills</p>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border border-border shadow-sm">
+          <Card className="overflow-hidden border-white/10 bg-[linear-gradient(160deg,#101826,#0f172a_55%,#020617)] shadow-[0_26px_60px_rgba(2,6,23,0.46)]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold text-foreground">Performance Insights</CardTitle>
-              <CardDescription>Live interpretation of your current standing</CardDescription>
+              <CardTitle className="text-xl font-semibold text-white">Performance Narrative</CardTitle>
+              <CardDescription className="text-slate-300">Readable decision cues with your current benchmark position.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {insightMessages.map((message) => (
-                <div key={message} className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-foreground">
+                <div key={message} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-slate-100">
                   {message}
                 </div>
               ))}
-              <div className="rounded-lg border border-border bg-primary/5 p-4">
+              <div className="rounded-[24px] border border-emerald-400/15 bg-emerald-400/10 p-5">
                 <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Your Activity</span>
-                  <span className="font-medium text-foreground">{currentUser?.activity_points || 0}</span>
+                  <span className="text-emerald-100/75">Your Activity</span>
+                  <span className="font-medium text-white">{currentUser?.activity_points || 0}</span>
                 </div>
                 <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{cohortLabel === "overall" ? "Average" : `${cohortLabel[0].toUpperCase()}${cohortLabel.slice(1)} Average`}</span>
-                  <span className="font-medium text-foreground">{cohortAverageActivity}</span>
+                  <span className="text-emerald-100/75">{cohortLabel === "overall" ? "Average" : `${cohortLabel[0].toUpperCase()}${cohortLabel.slice(1)} Average`}</span>
+                  <span className="font-medium text-white">{cohortAverageActivity}</span>
                 </div>
                 <Progress
                   value={cohortAverageActivity ? Math.min(((currentUser?.activity_points || 0) / cohortAverageActivity) * 100, 100) : 0}
                   className="h-2"
                 />
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl bg-slate-950/40 p-3">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-100/65">Rank</p>
+                    <p className="mt-2 text-2xl font-semibold text-white">#{currentRank > 0 ? currentRank : "-"}</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-950/40 p-3">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-100/65">Next Gap</p>
+                    <p className="mt-2 text-2xl font-semibold text-white">{pointsToNextRank}</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-950/40 p-3">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-100/65">Leader</p>
+                    <p className="mt-2 text-2xl font-semibold text-white">{leaderPoints}</p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -3329,10 +3395,10 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_28%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.16),transparent_24%),linear-gradient(140deg,rgba(15,23,42,0.98),rgba(2,6,23,0.94))] shadow-[0_30px_70px_rgba(2,6,23,0.55)]">
+          <Card className="overflow-hidden border-white/10 bg-[linear-gradient(135deg,#0b1220,#111827_58%,#0f172a)] shadow-[0_30px_70px_rgba(2,6,23,0.55)]">
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-semibold text-white">Performance Arena</CardTitle>
-              <CardDescription className="text-slate-300">High-contrast ranking view for the {cohortLabel} group with spotlight on top contributors and your position.</CardDescription>
+              <CardDescription className="text-slate-300">Premium ranking canvas for the {cohortLabel} group with podium leaders, benchmark line, and live point labels.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {performanceShowcaseData.length === 0 ? (
@@ -3356,7 +3422,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                       </div>
                     ))}
                   </div>
-                  <div className="rounded-[24px] border border-white/10 bg-slate-950/60 p-4">
+                  <div className="rounded-[28px] border border-white/10 bg-slate-950/80 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                     <ChartContainer
                       className="w-full"
                       config={{
@@ -3366,18 +3432,18 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                         third: { label: "3rd", color: "#fdba74" },
                         team: { label: "Team", color: "#38bdf8" },
                       }}
-                      style={{ height: Math.max(360, performanceShowcaseData.length * 52) }}
+                      style={{ height: Math.max(400, performanceShowcaseData.length * 54) }}
                     >
-                      <BarChart data={performanceShowcaseData} layout="vertical" margin={{ left: 10, right: 24, top: 10, bottom: 10 }} barCategoryGap={14}>
-                        <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="rgba(148,163,184,0.16)" />
+                      <BarChart data={performanceShowcaseData} layout="vertical" margin={{ left: 12, right: 30, top: 12, bottom: 12 }} barCategoryGap={14}>
+                        <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" />
                         <XAxis type="number" tickLine={false} axisLine={false} tick={{ fill: "#94a3b8", fontSize: 12 }} />
                         <YAxis
                           type="category"
                           dataKey="chartLabel"
-                          width={120}
+                          width={132}
                           tickLine={false}
                           axisLine={false}
-                          tick={{ fill: "#e2e8f0", fontSize: 12 }}
+                          tick={{ fill: "#e2e8f0", fontSize: 12, fontWeight: 500 }}
                         />
                         <ReferenceLine x={cohortAverageActivity} stroke="rgba(255,255,255,0.45)" strokeDasharray="5 5" />
                         <ChartTooltip
@@ -3397,7 +3463,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                             />
                           )}
                         />
-                        <Bar dataKey="points" radius={10} barSize={24}>
+                        <Bar dataKey="points" radius={12} barSize={28}>
                           <LabelList dataKey="points" position="right" fill="#f8fafc" fontSize={12} />
                           {performanceShowcaseData.map((entry) => (
                             <Cell key={entry.id} fill={entry.fill} />
