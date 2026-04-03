@@ -42,11 +42,13 @@ import {
   X,
   Zap,
 } from "lucide-react"
+import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts"
 import { toast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
@@ -197,6 +199,118 @@ function formatDateTime(value) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
   return date.toLocaleString()
+}
+
+function parseDateValue(value) {
+  if (!value) return null
+  const parsedDate = new Date(value)
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate
+}
+
+function getStartOfDay(value = new Date()) {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate())
+}
+
+function getDayDifferenceFromToday(value) {
+  const parsedDate = parseDateValue(value)
+
+  if (!parsedDate) {
+    return null
+  }
+
+  const today = getStartOfDay(new Date())
+  const dueDay = getStartOfDay(parsedDate)
+  const millisecondsPerDay = 1000 * 60 * 60 * 24
+
+  return Math.round((dueDay.getTime() - today.getTime()) / millisecondsPerDay)
+}
+
+function getTaskStatusClasses(status) {
+  if (status === "Done") {
+    return {
+      column: "bg-emerald-50 text-emerald-800",
+      card: "border-emerald-200/70 bg-emerald-50/30",
+      badge: "border-emerald-200 bg-emerald-100 text-emerald-800",
+      icon: "text-emerald-600",
+    }
+  }
+
+  if (status === "In Progress") {
+    return {
+      column: "bg-sky-50 text-sky-800",
+      card: "border-sky-200/70 bg-sky-50/30",
+      badge: "border-sky-200 bg-sky-100 text-sky-800",
+      icon: "text-sky-600",
+    }
+  }
+
+  return {
+    column: "bg-amber-50 text-amber-800",
+    card: "border-amber-200/70 bg-amber-50/30",
+    badge: "border-amber-200 bg-amber-100 text-amber-800",
+    icon: "text-amber-600",
+  }
+}
+
+function getTaskUrgency(task) {
+  const dayDifference = getDayDifferenceFromToday(task?.dueDate)
+
+  if (dayDifference === null) {
+    return {
+      tone: "neutral",
+      label: "No due date",
+      detail: "Add a deadline to track this task better.",
+    }
+  }
+
+  if (task?.status === "Done") {
+    return {
+      tone: "done",
+      label: "Completed",
+      detail: `Finished with due date ${formatDate(task.dueDate)}.`,
+    }
+  }
+
+  if (dayDifference < 0) {
+    const overdueDays = Math.abs(dayDifference)
+
+    return {
+      tone: "overdue",
+      label: `Overdue by ${overdueDays} day${overdueDays === 1 ? "" : "s"}`,
+      detail: `Deadline was ${formatDate(task.dueDate)}.`,
+    }
+  }
+
+  if (dayDifference === 0) {
+    return {
+      tone: "today",
+      label: "Due today",
+      detail: "This task needs attention before the day ends.",
+    }
+  }
+
+  if (dayDifference <= 2) {
+    return {
+      tone: "soon",
+      label: `Due in ${dayDifference} day${dayDifference === 1 ? "" : "s"}`,
+      detail: `Deadline is ${formatDate(task.dueDate)}.`,
+    }
+  }
+
+  return {
+    tone: "upcoming",
+    label: `Due in ${dayDifference} days`,
+    detail: `Deadline is ${formatDate(task.dueDate)}.`,
+  }
+}
+
+function getUrgencyBadgeClasses(tone) {
+  if (tone === "overdue") return "border-rose-200 bg-rose-100 text-rose-800"
+  if (tone === "today") return "border-orange-200 bg-orange-100 text-orange-800"
+  if (tone === "soon") return "border-amber-200 bg-amber-100 text-amber-800"
+  if (tone === "done") return "border-emerald-200 bg-emerald-100 text-emerald-800"
+  if (tone === "upcoming") return "border-slate-200 bg-slate-100 text-slate-800"
+  return "border-border bg-muted text-muted-foreground"
 }
 
 function formatRelativeTime(value) {
@@ -589,6 +703,8 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   const [announcementModalOpen, setAnnouncementModalOpen] = useState(false)
   const [announcementInsightsOpen, setAnnouncementInsightsOpen] = useState(false)
   const [reminderModalOpen, setReminderModalOpen] = useState(false)
+  const [taskReminderDialogOpen, setTaskReminderDialogOpen] = useState(false)
+  const [taskReminderDialogSeen, setTaskReminderDialogSeen] = useState(false)
   const [editingMemberId, setEditingMemberId] = useState(null)
   const [selectedMember, setSelectedMember] = useState(null)
   const [editingTeamId, setEditingTeamId] = useState(null)
@@ -1189,6 +1305,39 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     () => (taskStatusFilter === "All" ? visibleTasks : visibleTasks.filter((task) => task.status === taskStatusFilter)),
     [taskStatusFilter, visibleTasks]
   )
+  const urgentTasks = useMemo(
+    () => visibleTasks.filter((task) => {
+      const urgency = getTaskUrgency(task)
+      return task.status !== "Done" && ["overdue", "today", "soon"].includes(urgency.tone)
+    }),
+    [visibleTasks]
+  )
+  const overdueTasks = useMemo(
+    () => urgentTasks.filter((task) => getTaskUrgency(task).tone === "overdue"),
+    [urgentTasks]
+  )
+  const dueTodayTasks = useMemo(
+    () => urgentTasks.filter((task) => getTaskUrgency(task).tone === "today"),
+    [urgentTasks]
+  )
+  const dueSoonTasks = useMemo(
+    () => urgentTasks.filter((task) => getTaskUrgency(task).tone === "soon"),
+    [urgentTasks]
+  )
+  const upcomingReminders = useMemo(() => {
+    const now = new Date()
+    const nextTwoDays = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 2)
+
+    return reminders.filter((reminder) => {
+      const reminderDate = parseDateValue(reminder.dateTime)
+
+      if (!reminderDate) {
+        return false
+      }
+
+      return reminderDate >= now && reminderDate <= nextTwoDays
+    })
+  }, [reminders])
   const visibleSkills = useMemo(
     () => (isMember ? skills.filter((skill) => skill.userId === currentUser?.id) : skills),
     [currentUser?.id, isMember, skills]
@@ -1225,6 +1374,36 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     }
   }, [members, projects, visibleLeaderboard, visibleSkills, visibleTasks])
   const unreadNotifications = notifications.filter((notification) => !notification.read).length
+  const performanceChartData = useMemo(() => {
+    const comparisonPool = visibleLeaderboard
+      .filter((member) => Number(member.activity_points || 0) > 0 || String(member.id) === String(currentUser?.id || ""))
+      .sort((left, right) => {
+        if (right.activity_points !== left.activity_points) {
+          return right.activity_points - left.activity_points
+        }
+
+        return left.name.localeCompare(right.name)
+      })
+
+    return comparisonPool.map((member) => ({
+      id: member.id,
+      name: member.name,
+      shortName: member.name.length > 14 ? `${member.name.slice(0, 14)}...` : member.name,
+      points: Number(member.activity_points || 0),
+      fill: String(member.id) === String(currentUser?.id || "") ? "var(--color-you)" : "var(--color-team)",
+    }))
+  }, [currentUser?.id, visibleLeaderboard])
+
+  useEffect(() => {
+    if (taskReminderDialogSeen) {
+      return
+    }
+
+    if (urgentTasks.length > 0 || upcomingReminders.length > 0) {
+      setTaskReminderDialogOpen(true)
+      setTaskReminderDialogSeen(true)
+    }
+  }, [taskReminderDialogSeen, upcomingReminders.length, urgentTasks.length])
 
   function getMemberById(userId) {
     if (!userId) {
@@ -2609,38 +2788,80 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           </div>
         </div>
 
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <Card className="border border-rose-200/70 bg-rose-50/60 shadow-sm">
+            <CardContent className="p-5">
+              <p className="text-sm text-rose-700">Overdue</p>
+              <p className="mt-2 text-3xl font-bold text-rose-900">{overdueTasks.length}</p>
+              <p className="mt-1 text-xs text-rose-700/80">Tasks already past their deadline</p>
+            </CardContent>
+          </Card>
+          <Card className="border border-orange-200/70 bg-orange-50/60 shadow-sm">
+            <CardContent className="p-5">
+              <p className="text-sm text-orange-700">Due Today</p>
+              <p className="mt-2 text-3xl font-bold text-orange-900">{dueTodayTasks.length}</p>
+              <p className="mt-1 text-xs text-orange-700/80">Need attention before the day ends</p>
+            </CardContent>
+          </Card>
+          <Card className="border border-amber-200/70 bg-amber-50/60 shadow-sm">
+            <CardContent className="p-5">
+              <p className="text-sm text-amber-700">Due Soon</p>
+              <p className="mt-2 text-3xl font-bold text-amber-900">{dueSoonTasks.length}</p>
+              <p className="mt-1 text-xs text-amber-700/80">Upcoming within the next 2 days</p>
+            </CardContent>
+          </Card>
+          <Card className="border border-emerald-200/70 bg-emerald-50/60 shadow-sm">
+            <CardContent className="p-5">
+              <p className="text-sm text-emerald-700">Done Archive</p>
+              <p className="mt-2 text-3xl font-bold text-emerald-900">{groupedTasks.Done.length}</p>
+              <p className="mt-1 text-xs text-emerald-700/80">Completed tasks remain reviewable here</p>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className={cn("grid gap-6", statusesToShow.length === 1 ? "md:grid-cols-1" : "md:grid-cols-3")}>
-          {statusesToShow.map((status) => (
+          {statusesToShow.map((status) => {
+            const statusClasses = getTaskStatusClasses(status)
+
+            return (
             <div key={status} className="space-y-3">
-              <div
-                className={cn(
-                  "flex items-center gap-2 rounded-lg p-3",
-                  status === "Pending" && "bg-muted/50",
-                  status === "In Progress" && "bg-primary/10",
-                  status === "Done" && "bg-accent/10"
-                )}
-              >
-                {status === "Pending" ? <Circle className="h-4 w-4 text-muted-foreground" /> : null}
-                {status === "In Progress" ? <AlertCircle className="h-4 w-4 text-primary" /> : null}
-                {status === "Done" ? <CheckCircle2 className="h-4 w-4 text-accent" /> : null}
+              <div className={cn("flex items-center gap-2 rounded-lg p-3", statusClasses.column)}>
+                {status === "Pending" ? <Circle className={cn("h-4 w-4", statusClasses.icon)} /> : null}
+                {status === "In Progress" ? <AlertCircle className={cn("h-4 w-4", statusClasses.icon)} /> : null}
+                {status === "Done" ? <CheckCircle2 className={cn("h-4 w-4", statusClasses.icon)} /> : null}
                 <span className="font-medium text-foreground">{status}</span>
-                <Badge variant={status === "Done" ? "default" : status === "In Progress" ? "secondary" : "outline"} className="ml-auto">
+                <Badge className={cn("ml-auto border", statusClasses.badge)}>
                   {groupedTasks[status].length}
                 </Badge>
               </div>
 
               <div className="space-y-3">
-                {groupedTasks[status].map((task) => (
-                  <Card key={task.id} className="border border-border shadow-sm">
+                {groupedTasks[status].map((task) => {
+                  const taskStatusClasses = getTaskStatusClasses(task.status)
+                  const urgency = getTaskUrgency(task)
+
+                  return (
+                  <Card key={task.id} className={cn("border shadow-sm", taskStatusClasses.card)}>
                     <CardContent className="p-4">
                       <div className="mb-2 flex items-start justify-between gap-3">
-                        <h4 className="text-sm font-medium text-foreground">{task.title}</h4>
-                        <Badge
-                          variant={task.priority === "High" ? "destructive" : task.priority === "Medium" ? "secondary" : "outline"}
-                          className="text-xs"
-                        >
-                          {task.priority}
-                        </Badge>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 className="text-sm font-medium text-foreground">{task.title}</h4>
+                            <Badge className={cn("border text-[11px]", taskStatusClasses.badge)}>{task.status}</Badge>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">{urgency.detail}</p>
+                        </div>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Badge
+                            variant={task.priority === "High" ? "destructive" : task.priority === "Medium" ? "secondary" : "outline"}
+                            className="text-xs"
+                          >
+                            {task.priority}
+                          </Badge>
+                          <Badge className={cn("border text-[11px]", getUrgencyBadgeClasses(urgency.tone))}>
+                            {urgency.label}
+                          </Badge>
+                        </div>
                       </div>
                       <p className="mb-3 text-xs text-muted-foreground">{task.description}</p>
                       <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -2648,7 +2869,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                         <span>•</span>
                         <span>{task.project}</span>
                         <span>•</span>
-                        <span>{formatDate(task.dueDate)}</span>
+                        <span>Due {formatDate(task.dueDate)}</span>
                       </div>
                       <div className="flex justify-end gap-2">
                         {permissions.canDeleteRecords ? (
@@ -2689,7 +2910,8 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                       {discussionOpenState[getDiscussionKey("task", task.id)] ? renderDiscussionPanel("task", task.id) : null}
                     </CardContent>
                   </Card>
-                ))}
+                  )
+                })}
 
                 {groupedTasks[status].length === 0 ? (
                   <Card className="border border-dashed border-border shadow-sm">
@@ -2700,7 +2922,8 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 ) : null}
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     )
@@ -2941,9 +3164,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     const cohortAverageActivity = rankedPool.length
       ? Math.round(comparisonPool.reduce((sum, member) => sum + member.activity_points, 0) / comparisonPool.length)
       : 0
-    const topMembers = rankedPool.slice(0, 5)
     const currentRank = rankedPool.findIndex((member) => member.id === currentUser?.id) + 1
-    const maxPoints = topMembers[0]?.activity_points || 1
     const nextRankMember = currentRank > 1 ? rankedPool[currentRank - 2] : null
     const pointsToNextRank = nextRankMember
       ? Math.max((nextRankMember.activity_points || 0) - (currentUser?.activity_points || 0), 0)
@@ -3076,27 +3297,51 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
 
           <Card className="border border-border shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold text-foreground">Top Contributors</CardTitle>
-              <CardDescription>Top 5 ranked by activity points inside the {cohortLabel} group</CardDescription>
+              <CardTitle className="text-lg font-semibold text-foreground">Team Performance Chart</CardTitle>
+              <CardDescription>Fair comparison of activity points across the {cohortLabel} group</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {topMembers.map((member, index) => (
-                <div key={member.id} className="flex items-center gap-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground">
-                    {index + 1}
+              {performanceChartData.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Performance data will appear once members start earning activity points.</p>
+              ) : (
+                <>
+                  <ChartContainer
+                    className="w-full"
+                    config={{
+                      you: { label: "You", color: "#0f766e" },
+                      team: { label: "Team", color: "#94a3b8" },
+                    }}
+                    style={{ height: Math.max(280, performanceChartData.length * 44) }}
+                  >
+                    <BarChart data={performanceChartData} layout="vertical" margin={{ left: 12, right: 12 }}>
+                      <CartesianGrid horizontal={false} />
+                      <XAxis type="number" hide />
+                      <YAxis
+                        type="category"
+                        dataKey="shortName"
+                        width={110}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel formatter={(value, _name, item) => (
+                        <div className="flex min-w-[10rem] items-center justify-between gap-4">
+                          <span>{item?.payload?.name || "Member"}</span>
+                          <span className="font-mono">{value} pts</span>
+                        </div>
+                      )} />} />
+                      <Bar dataKey="points" radius={6}>
+                        {performanceChartData.map((entry) => (
+                          <Cell key={entry.id} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
+                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <Badge className="border border-emerald-200 bg-emerald-100 text-emerald-800">You</Badge>
+                    <span>Your bar is highlighted for quick comparison.</span>
                   </div>
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary/10 text-primary">{member.avatar}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-1 flex justify-between gap-4">
-                      <span className="truncate font-medium text-foreground">{member.name}</span>
-                      <span className="text-sm text-muted-foreground">{member.activity_points} pts</span>
-                    </div>
-                    <Progress value={(member.activity_points / maxPoints) * 100} className="h-2" />
-                  </div>
-                </div>
-              ))}
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -3441,6 +3686,84 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           {renderBanner(pageError)}
           {renderPage()}
         </main>
+
+        <Dialog open={taskReminderDialogOpen} onOpenChange={setTaskReminderDialogOpen}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Task Reminder Center</DialogTitle>
+              <DialogDescription>
+                Quick view of urgent tasks and upcoming reminders as soon as you enter the portal.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-rose-200 bg-rose-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-rose-700">Overdue</p>
+                  <p className="mt-2 text-2xl font-semibold text-rose-900">{overdueTasks.length}</p>
+                </div>
+                <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-orange-700">Due Today</p>
+                  <p className="mt-2 text-2xl font-semibold text-orange-900">{dueTodayTasks.length}</p>
+                </div>
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-xs uppercase tracking-wide text-amber-700">Upcoming Reminders</p>
+                  <p className="mt-2 text-2xl font-semibold text-amber-900">{upcomingReminders.length}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-foreground">Urgent Tasks</p>
+                {urgentTasks.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No urgent tasks right now.</p>
+                ) : (
+                  urgentTasks.slice(0, 6).map((task) => {
+                    const urgency = getTaskUrgency(task)
+
+                    return (
+                      <div key={task.id} className="rounded-lg border border-border bg-muted/30 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <p className="font-medium text-foreground">{task.title}</p>
+                            <p className="text-xs text-muted-foreground">{task.project} • {task.assignee}</p>
+                          </div>
+                          <Badge className={cn("border", getUrgencyBadgeClasses(urgency.tone))}>{urgency.label}</Badge>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-foreground">Upcoming Reminders</p>
+                {upcomingReminders.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No reminders scheduled in the next 48 hours.</p>
+                ) : (
+                  upcomingReminders.slice(0, 5).map((reminder) => (
+                    <div key={reminder.id} className="rounded-lg border border-border bg-muted/30 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="font-medium text-foreground">{reminder.title}</p>
+                          <p className="text-xs text-muted-foreground">{reminder.description}</p>
+                        </div>
+                        <Badge variant="outline">{formatDateTime(reminder.dateTime)}</Badge>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setTaskReminderDialogOpen(false)}>Close</Button>
+              <Button onClick={() => {
+                setActivePage("tasks")
+                setTaskReminderDialogOpen(false)
+              }}>
+                Open Tasks
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={memberModalOpen} onOpenChange={(open) => {
           setMemberModalOpen(open)
