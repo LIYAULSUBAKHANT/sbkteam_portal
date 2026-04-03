@@ -3233,9 +3233,9 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     const activityVsAverage = cohortAverageActivity ? Math.min(Math.round(((currentUser?.activity_points || 0) / cohortAverageActivity) * 100), 100) : 0
     const executionScore = Math.round((taskProgress * 0.6) + (skillProgress * 0.4))
     const spotlightRingData = [
-      { key: "leader", label: "Vs Leader", value: activityVsLeader, fill: "var(--color-leader)" },
+      { key: "leader", label: "Top Performer", value: activityVsLeader, fill: "var(--color-leader)" },
       { key: "average", label: "Vs Average", value: activityVsAverage, fill: "var(--color-average)" },
-      { key: "execution", label: "Execution", value: executionScore, fill: "var(--color-execution)" },
+      { key: "execution", label: "Completion Score", value: executionScore, fill: "var(--color-execution)" },
     ]
 
     return (
@@ -3284,9 +3284,9 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                     <ChartContainer
                       className="mx-auto max-w-[180px]"
                       config={{
-                        leader: { label: "Vs Leader", color: "#22c55e" },
+                        leader: { label: "Top Performer", color: "#22c55e" },
                         average: { label: "Vs Average", color: "#38bdf8" },
-                        execution: { label: "Execution", color: "#f59e0b" },
+                        execution: { label: "Completion Score", color: "#f59e0b" },
                       }}
                       style={{ height: 170 }}
                     >
