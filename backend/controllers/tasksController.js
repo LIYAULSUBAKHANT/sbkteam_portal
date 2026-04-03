@@ -108,6 +108,7 @@ async function getTasks(req, res) {
         t.status,
         t.priority,
         t.due_date,
+        t.completed_at,
         t.project_id,
         p.name AS project_name,
         t.assigned_to_user_id,
@@ -156,8 +157,15 @@ async function updateTaskStatus(req, res) {
     }
 
     await db.execute(
-      "UPDATE tasks SET status = ? WHERE id = ?",
-      [status, id]
+      `UPDATE tasks
+       SET status = ?,
+           completed_at = CASE
+             WHEN ? = 'Done' THEN COALESCE(completed_at, NOW())
+             WHEN ? <> 'Done' THEN NULL
+             ELSE completed_at
+           END
+       WHERE id = ?`,
+      [status, status, status, id]
     );
 
     await logActivity({
@@ -198,7 +206,12 @@ async function updateTask(req, res) {
            description = COALESCE(?, description),
            status = COALESCE(?, status),
            priority = COALESCE(?, priority),
-           due_date = COALESCE(?, due_date)
+           due_date = COALESCE(?, due_date),
+           completed_at = CASE
+             WHEN COALESCE(?, status) = 'Done' THEN COALESCE(completed_at, NOW())
+             WHEN ? IS NOT NULL AND ? <> 'Done' THEN NULL
+             ELSE completed_at
+           END
        WHERE id = ?`,
       [
         project_id || null,
@@ -208,6 +221,9 @@ async function updateTask(req, res) {
         status || null,
         priority || null,
         due_date || null,
+        status || null,
+        status || null,
+        status || null,
         id
       ]
     );

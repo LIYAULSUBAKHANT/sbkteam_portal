@@ -117,7 +117,7 @@ const levelColors = {
   Expert: "bg-amber-100 text-amber-800 border-amber-200",
 }
 
-const taskStatusOptions = ["All", "Pending", "In Progress", "Done"]
+const taskStatusOptions = ["All", "Pending", "In Progress"]
 const roleOptions = [
   { label: "Captain", value: 1 },
   { label: "Vice Captain", value: 2 },
@@ -546,10 +546,15 @@ function normalizeTask(task) {
     status: task.status,
     priority: task.priority,
     dueDate: task.due_date,
+    completedAt: task.completed_at,
+    createdAt: task.created_at,
+    updatedAt: task.updated_at,
     projectId: String(task.project_id),
     project: task.project_name || "Unknown project",
     assignee: task.assigned_to_name || "Unassigned",
     assignedTo: String(task.assigned_to_user_id),
+    createdByUserId: String(task.created_by_user_id || ""),
+    createdBy: task.created_by_name || "Unknown user",
   }
 }
 
@@ -691,7 +696,9 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [taskBoardMode, setTaskBoardMode] = useState("live")
   const [taskStatusFilter, setTaskStatusFilter] = useState("All")
+  const [taskHistoryMemberFilter, setTaskHistoryMemberFilter] = useState("all")
   const currentUser = useAppStore((state) => state.currentUser)
   const members = useAppStore((state) => state.users)
   const teams = useAppStore((state) => state.teams)
@@ -1313,19 +1320,68 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     [members]
   )
   const visibleTasks = useMemo(
-    () => (isMember ? tasks.filter((task) => task.assignedTo === currentUser?.id) : tasks),
+    () => (isMember ? tasks.filter((task) => String(task.assignedTo) === String(currentUser?.id || "")) : tasks),
     [currentUser?.id, isMember, tasks]
   )
-  const filteredTasks = useMemo(
-    () => (taskStatusFilter === "All" ? visibleTasks : visibleTasks.filter((task) => task.status === taskStatusFilter)),
-    [taskStatusFilter, visibleTasks]
+  const liveTasks = useMemo(
+    () => visibleTasks.filter((task) => task.status !== "Done"),
+    [visibleTasks]
   )
+  const completedTasksHistory = useMemo(
+    () => visibleTasks
+      .filter((task) => task.status === "Done")
+      .sort((left, right) => new Date(right.completedAt || right.updatedAt || 0).getTime() - new Date(left.completedAt || left.updatedAt || 0).getTime()),
+    [visibleTasks]
+  )
+  const filteredTasks = useMemo(
+    () => (taskStatusFilter === "All" ? liveTasks : liveTasks.filter((task) => task.status === taskStatusFilter)),
+    [liveTasks, taskStatusFilter]
+  )
+  const filteredTaskHistory = useMemo(
+    () => (
+      taskHistoryMemberFilter === "all"
+        ? completedTasksHistory
+        : completedTasksHistory.filter((task) => task.assignedTo === taskHistoryMemberFilter)
+    ),
+    [completedTasksHistory, taskHistoryMemberFilter]
+  )
+  const teamTaskProgress = useMemo(() => {
+    if (isMember) {
+      return []
+    }
+
+      return members
+      .map((member) => {
+        const memberTasks = tasks.filter((task) => String(task.assignedTo) === String(member.id))
+        const memberLiveTasks = memberTasks.filter((task) => task.status !== "Done")
+        const memberCompletedTasks = memberTasks.filter((task) => task.status === "Done")
+        const memberOverdueTasks = memberLiveTasks.filter((task) => getTaskUrgency(task).tone === "overdue")
+        const progress = memberTasks.length ? Math.round((memberCompletedTasks.length / memberTasks.length) * 100) : 0
+
+        return {
+          member,
+          total: memberTasks.length,
+          live: memberLiveTasks.length,
+          completed: memberCompletedTasks.length,
+          overdue: memberOverdueTasks.length,
+          progress,
+        }
+      })
+      .filter((item) => item.total > 0)
+      .sort((left, right) => {
+        if (right.completed !== left.completed) {
+          return right.completed - left.completed
+        }
+
+        return left.member.name.localeCompare(right.member.name)
+      })
+    }, [isMember, members, tasks])
   const urgentTasks = useMemo(
-    () => visibleTasks.filter((task) => {
+    () => liveTasks.filter((task) => {
       const urgency = getTaskUrgency(task)
       return task.status !== "Done" && ["overdue", "today", "soon"].includes(urgency.tone)
     }),
-    [visibleTasks]
+    [liveTasks]
   )
   const overdueTasks = useMemo(
     () => urgentTasks.filter((task) => getTaskUrgency(task).tone === "overdue"),
@@ -1509,7 +1565,17 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     setActionError("")
     try {
       await apiPatch(`/api/tasks/${taskId}/status`, { status })
-      setTasks((previous) => previous.map((task) => (task.id === taskId ? { ...task, status } : task)))
+      const completionTimestamp = status === "Done" ? new Date().toISOString() : null
+      setTasks((previous) => previous.map((task) => (
+        task.id === taskId
+          ? {
+            ...task,
+            status,
+            completedAt: completionTimestamp,
+            updatedAt: completionTimestamp || task.updatedAt,
+          }
+          : task
+      )))
     } catch (error) {
       setActionError(error.message || "Failed to update task status.")
     }
@@ -2804,9 +2870,9 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     const groupedTasks = {
       Pending: filteredTasks.filter((task) => task.status === "Pending"),
       "In Progress": filteredTasks.filter((task) => task.status === "In Progress"),
-      Done: filteredTasks.filter((task) => task.status === "Done"),
     }
-    const statusesToShow = taskStatusFilter === "All" ? ["Pending", "In Progress", "Done"] : [taskStatusFilter]
+    const statusesToShow = taskStatusFilter === "All" ? ["Pending", "In Progress"] : [taskStatusFilter]
+    const historyMembers = teamTaskProgress.map(({ member }) => member)
 
     return (
       <div className="space-y-6">
@@ -2817,7 +2883,35 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           <div>
             <h2 className="text-2xl font-bold text-foreground">Tasks</h2>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-border/70 bg-card/70 p-2 shadow-sm backdrop-blur">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setTaskBoardMode("live")}
+                className={cn(
+                  "rounded-xl px-4 text-sm font-medium transition-colors",
+                  taskBoardMode === "live"
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                Live Tasks
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setTaskBoardMode("history")}
+                className={cn(
+                  "rounded-xl px-4 text-sm font-medium transition-colors",
+                  taskBoardMode === "history"
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                Task History
+              </Button>
+            </div>
             <div className="inline-flex flex-wrap items-center gap-2 rounded-2xl border border-border/70 bg-card/70 p-2 shadow-sm backdrop-blur">
               {taskStatusOptions.map((status) => (
                 <Button
@@ -2849,133 +2943,275 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
 
         <div className="overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(135deg,#111827,#0f172a_55%,#020617)] shadow-[0_32px_80px_rgba(2,6,23,0.55)]">
           <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-rose-400/20 bg-slate-950/80 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.26em] text-rose-200/75">Overdue</p>
-                <p className="mt-2 text-3xl font-semibold text-white">{overdueTasks.length}</p>
-                <p className="mt-1 text-xs text-rose-100/75">Need immediate attention</p>
-              </div>
-              <div className="rounded-2xl border border-orange-400/20 bg-slate-950/80 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.26em] text-orange-200/75">Due Today</p>
-                <p className="mt-2 text-3xl font-semibold text-white">{dueTodayTasks.length}</p>
-                <p className="mt-1 text-xs text-orange-100/75">Should close before day end</p>
-              </div>
-              <div className="rounded-2xl border border-amber-300/20 bg-slate-950/80 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.26em] text-amber-100/75">Due Soon</p>
-                <p className="mt-2 text-3xl font-semibold text-white">{dueSoonTasks.length}</p>
-                <p className="mt-1 text-xs text-amber-100/75">Next two days pipeline</p>
-              </div>
-              <div className="rounded-2xl border border-emerald-400/20 bg-slate-950/80 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.26em] text-emerald-100/75">Done Archive</p>
-                <p className="mt-2 text-3xl font-semibold text-white">{groupedTasks.Done.length}</p>
-                <p className="mt-1 text-xs text-emerald-100/75">Completed work stays reviewable</p>
-              </div>
+            <div className="rounded-2xl border border-rose-400/20 bg-slate-950/80 px-4 py-3">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-rose-200/75">Overdue</p>
+              <p className="mt-2 text-3xl font-semibold text-white">{overdueTasks.length}</p>
+              <p className="mt-1 text-xs text-rose-100/75">Need immediate attention</p>
+            </div>
+            <div className="rounded-2xl border border-orange-400/20 bg-slate-950/80 px-4 py-3">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-orange-200/75">Due Today</p>
+              <p className="mt-2 text-3xl font-semibold text-white">{dueTodayTasks.length}</p>
+              <p className="mt-1 text-xs text-orange-100/75">Should close before day end</p>
+            </div>
+            <div className="rounded-2xl border border-amber-300/20 bg-slate-950/80 px-4 py-3">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-amber-100/75">Due Soon</p>
+              <p className="mt-2 text-3xl font-semibold text-white">{dueSoonTasks.length}</p>
+              <p className="mt-1 text-xs text-amber-100/75">Next two days pipeline</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-400/20 bg-slate-950/80 px-4 py-3">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-emerald-100/75">Task Archive</p>
+              <p className="mt-2 text-3xl font-semibold text-white">{completedTasksHistory.length}</p>
+              <p className="mt-1 text-xs text-emerald-100/75">Finished work stays reviewable</p>
+            </div>
           </div>
         </div>
 
-        <div className={cn("grid gap-6", statusesToShow.length === 1 ? "md:grid-cols-1" : "md:grid-cols-3")}>
-          {statusesToShow.map((status) => {
-            const statusClasses = getTaskStatusClasses(status)
+        {taskBoardMode === "live" ? (
+          <div className={cn("grid gap-6", statusesToShow.length === 1 ? "md:grid-cols-1" : "md:grid-cols-2")}>
+            {statusesToShow.map((status) => {
+              const statusClasses = getTaskStatusClasses(status)
 
-            return (
-            <div key={status} className="space-y-4">
-              <div className={cn("flex items-center gap-2 rounded-2xl px-4 py-3", statusClasses.column)}>
-                {status === "Pending" ? <Circle className={cn("h-4 w-4", statusClasses.icon)} /> : null}
-                {status === "In Progress" ? <AlertCircle className={cn("h-4 w-4", statusClasses.icon)} /> : null}
-                {status === "Done" ? <CheckCircle2 className={cn("h-4 w-4", statusClasses.icon)} /> : null}
-                <span className="font-medium text-white">{status}</span>
-                <Badge className={cn("ml-auto border", statusClasses.badge)}>
-                  {groupedTasks[status].length}
-                </Badge>
+              return (
+                <div key={status} className="space-y-4">
+                  <div className={cn("flex items-center gap-2 rounded-2xl px-4 py-3", statusClasses.column)}>
+                    {status === "Pending" ? <Circle className={cn("h-4 w-4", statusClasses.icon)} /> : null}
+                    {status === "In Progress" ? <AlertCircle className={cn("h-4 w-4", statusClasses.icon)} /> : null}
+                    <span className="font-medium text-white">{status}</span>
+                    <Badge className={cn("ml-auto border", statusClasses.badge)}>
+                      {groupedTasks[status].length}
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-4">
+                    {groupedTasks[status].map((task) => {
+                      const taskStatusClasses = getTaskStatusClasses(task.status)
+                      const urgency = getTaskUrgency(task)
+
+                      return (
+                        <Card key={task.id} className={cn("overflow-hidden rounded-[24px] border shadow-sm transition-transform duration-200 hover:-translate-y-1", taskStatusClasses.card)}>
+                          <div className={cn("h-1.5 w-full bg-gradient-to-r", taskStatusClasses.rail)} />
+                          <CardContent className="p-5">
+                            <div className="mb-3 flex items-start justify-between gap-3">
+                              <div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h4 className="text-base font-semibold leading-6 text-white">{task.title}</h4>
+                                  <Badge className={cn("border text-[11px]", taskStatusClasses.badge)}>{task.status}</Badge>
+                                </div>
+                                <p className="mt-2 text-xs text-slate-300">{urgency.detail}</p>
+                              </div>
+                              <div className="flex flex-wrap justify-end gap-2">
+                                <Badge className={cn("border text-xs", getTaskPriorityClasses(task.priority))}>
+                                  {task.priority}
+                                </Badge>
+                                <Badge className={cn("border text-[11px]", getUrgencyBadgeClasses(urgency.tone))}>
+                                  {urgency.label}
+                                </Badge>
+                              </div>
+                            </div>
+                            <p className="mb-4 text-sm leading-7 text-slate-300">{task.description}</p>
+                            <div className="mb-5 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400">
+                              <span>{task.assignee}</span>
+                              <span>&bull;</span>
+                              <span>{task.project}</span>
+                              <span>&bull;</span>
+                              <span>Due {formatDate(task.dueDate)}</span>
+                            </div>
+                            <div className="flex justify-end gap-2">
+                              {permissions.canDeleteRecords ? (
+                                <Button variant="secondary" size="sm" onClick={() => openTaskEditModal(task)}>
+                                  Edit
+                                </Button>
+                              ) : null}
+                              {permissions.canDeleteRecords ? (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleDeleteItem(`/api/tasks/${task.id}`, "Task deleted successfully.", `Delete task ${task.title}?`)}
+                                >
+                                  Delete
+                                </Button>
+                              ) : null}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">Move</Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  {["Pending", "In Progress", "Done"].map((nextStatus) => (
+                                    <DropdownMenuItem key={nextStatus} onClick={() => handleTaskStatusChange(task.id, nextStatus)}>
+                                      {nextStatus}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => toggleDiscussionPanel("task", task.id)}
+                              >
+                                <MessageSquare className="mr-1 h-4 w-4" />
+                                {discussionOpenState[getDiscussionKey("task", task.id)] ? "Hide Discussion" : "Discuss"}
+                              </Button>
+                            </div>
+                            {discussionOpenState[getDiscussionKey("task", task.id)] ? renderDiscussionPanel("task", task.id) : null}
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+
+                    {groupedTasks[status].length === 0 ? (
+                      <Card className="rounded-[24px] border border-dashed border-white/10 bg-slate-950/70 shadow-sm">
+                        <CardContent className="py-12 text-center text-sm text-slate-400">
+                          No tasks in this status.
+                        </CardContent>
+                      </Card>
+                    ) : null}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {!isMember ? (
+              <div className="overflow-hidden rounded-[28px] border border-sky-500/20 bg-[linear-gradient(135deg,#0f172a,#0b1b34_58%,#082f49)] shadow-[0_28px_70px_rgba(2,6,23,0.45)]">
+                <div className="flex flex-col gap-4 border-b border-white/10 p-5 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Member Progress Overview</h3>
+                    <p className="text-sm text-slate-300">Leaders can monitor current work and completed history from one place.</p>
+                  </div>
+                  <div className="w-full max-w-xs">
+                    <Select value={taskHistoryMemberFilter} onValueChange={setTaskHistoryMemberFilter}>
+                      <SelectTrigger className="border-white/10 bg-slate-950/70 text-white">
+                        <SelectValue placeholder="Filter by member" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All members</SelectItem>
+                        {historyMembers.map((member) => (
+                          <SelectItem key={member.id} value={String(member.id)}>
+                            {member.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
+                  {teamTaskProgress
+                    .filter((entry) => taskHistoryMemberFilter === "all" || String(entry.member.id) === String(taskHistoryMemberFilter))
+                    .map((entry) => (
+                      <Card key={entry.member.id} className="border-white/10 bg-slate-950/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+                        <CardContent className="space-y-4 p-5">
+                          <div className="flex items-center justify-between gap-3">
+                            {renderMemberIdentity(entry.member, entry.member.name)}
+                            <Badge className="border-sky-400/25 bg-sky-400/12 text-sky-100">
+                              {entry.progress}% complete
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 text-center">
+                            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Live</p>
+                              <p className="mt-2 text-2xl font-semibold text-white">{entry.live}</p>
+                            </div>
+                            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Done</p>
+                              <p className="mt-2 text-2xl font-semibold text-white">{entry.completed}</p>
+                            </div>
+                            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Overdue</p>
+                              <p className="mt-2 text-2xl font-semibold text-white">{entry.overdue}</p>
+                            </div>
+                          </div>
+                          <div>
+                            <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-[0.18em] text-slate-400">
+                              <span>Total workload</span>
+                              <span>{entry.total} tasks</span>
+                            </div>
+                            <Progress value={entry.progress} className="h-2 bg-white/10" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Completed Task History</h3>
+                  <p className="text-sm text-muted-foreground">Finished tasks move here automatically for later review.</p>
+                </div>
+                {isMember ? <Badge variant="secondary">{filteredTaskHistory.length} archived</Badge> : null}
               </div>
 
-              <div className="space-y-4">
-                {groupedTasks[status].map((task) => {
-                  const taskStatusClasses = getTaskStatusClasses(task.status)
-                  const urgency = getTaskUrgency(task)
+              <div className="grid gap-4 lg:grid-cols-2">
+                {filteredTaskHistory.map((task) => {
+                  const taskStatusClasses = getTaskStatusClasses("Done")
 
                   return (
-                  <Card key={task.id} className={cn("overflow-hidden rounded-[24px] border shadow-sm transition-transform duration-200 hover:-translate-y-1", taskStatusClasses.card)}>
-                    <div className={cn("h-1.5 w-full bg-gradient-to-r", taskStatusClasses.rail)} />
-                    <CardContent className="p-5">
-                      <div className="mb-3 flex items-start justify-between gap-3">
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="text-base font-semibold leading-6 text-white">{task.title}</h4>
-                            <Badge className={cn("border text-[11px]", taskStatusClasses.badge)}>{task.status}</Badge>
+                    <Card key={task.id} className={cn("overflow-hidden rounded-[24px] border shadow-sm", taskStatusClasses.card)}>
+                      <div className={cn("h-1.5 w-full bg-gradient-to-r", taskStatusClasses.rail)} />
+                      <CardContent className="space-y-4 p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="text-base font-semibold text-white">{task.title}</h4>
+                              <Badge className={cn("border text-[11px]", taskStatusClasses.badge)}>Completed</Badge>
+                            </div>
+                            <p className="mt-2 text-sm leading-6 text-slate-300">{task.description}</p>
                           </div>
-                          <p className="mt-2 text-xs text-slate-300">{urgency.detail}</p>
-                        </div>
-                        <div className="flex flex-wrap justify-end gap-2">
                           <Badge className={cn("border text-xs", getTaskPriorityClasses(task.priority))}>
                             {task.priority}
                           </Badge>
-                          <Badge className={cn("border text-[11px]", getUrgencyBadgeClasses(urgency.tone))}>
-                            {urgency.label}
-                          </Badge>
                         </div>
-                      </div>
-                      <p className="mb-4 text-sm leading-7 text-slate-300">{task.description}</p>
-                      <div className="mb-5 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400">
-                        <span>{task.assignee}</span>
-                        <span>•</span>
-                        <span>{task.project}</span>
-                        <span>•</span>
-                        <span>Due {formatDate(task.dueDate)}</span>
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        {permissions.canDeleteRecords ? (
-                          <Button variant="secondary" size="sm" onClick={() => openTaskEditModal(task)}>
-                            Edit
-                          </Button>
-                        ) : null}
-                        {permissions.canDeleteRecords ? (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteItem(`/api/tasks/${task.id}`, "Task deleted successfully.", `Delete task ${task.title}?`)}
-                          >
-                            Delete
-                          </Button>
-                        ) : null}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">Move</Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            {["Pending", "In Progress", "Done"].map((nextStatus) => (
-                              <DropdownMenuItem key={nextStatus} onClick={() => handleTaskStatusChange(task.id, nextStatus)}>
-                                {nextStatus}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleDiscussionPanel("task", task.id)}
-                        >
-                          <MessageSquare className="mr-1 h-4 w-4" />
-                          {discussionOpenState[getDiscussionKey("task", task.id)] ? "Hide Discussion" : "Discuss"}
-                        </Button>
-                      </div>
-                      {discussionOpenState[getDiscussionKey("task", task.id)] ? renderDiscussionPanel("task", task.id) : null}
-                    </CardContent>
-                  </Card>
+
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Assignee</p>
+                            <div className="mt-3">
+                              {renderMemberIdentity(getMemberById(task.assignedTo), task.assignee, { compact: true })}
+                            </div>
+                          </div>
+                          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Created By</p>
+                            <div className="mt-3">
+                              {renderMemberIdentity(getMemberById(task.createdByUserId), task.createdBy, { compact: true })}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-3">
+                          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Project</p>
+                            <p className="mt-2 font-medium text-white">{task.project}</p>
+                          </div>
+                          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Completed On</p>
+                            <p className="mt-2 font-medium text-white">{formatDate(task.completedAt || task.updatedAt)}</p>
+                          </div>
+                          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Due Date</p>
+                            <p className="mt-2 font-medium text-white">{formatDate(task.dueDate)}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   )
                 })}
-
-                {groupedTasks[status].length === 0 ? (
-                  <Card className="rounded-[24px] border border-dashed border-white/10 bg-slate-950/70 shadow-sm">
-                    <CardContent className="py-12 text-center text-sm text-slate-400">
-                      No tasks in this status.
-                    </CardContent>
-                  </Card>
-                ) : null}
               </div>
+
+              {filteredTaskHistory.length === 0 ? (
+                <Card className="rounded-[24px] border border-dashed border-white/10 bg-slate-950/70 shadow-sm">
+                  <CardContent className="py-12 text-center">
+                    <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-slate-500" />
+                    <h3 className="mb-2 text-lg font-semibold text-white">No Archived Tasks Yet</h3>
+                    <p className="text-slate-400">Completed tasks will move here automatically.</p>
+                  </CardContent>
+                </Card>
+              ) : null}
             </div>
-            )
-          })}
-        </div>
+          </div>
+        )}
       </div>
     )
   }
