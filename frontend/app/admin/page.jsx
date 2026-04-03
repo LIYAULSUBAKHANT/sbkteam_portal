@@ -820,6 +820,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     proof_note: "",
     review_feedback: "",
   })
+  const [taskProofFile, setTaskProofFile] = useState(null)
   const [skillForm, setSkillForm] = useState({
     user_ids: [],
     skill_name: "",
@@ -1643,6 +1644,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       proof_note: task.proofNote || "",
       review_feedback: "",
     })
+    setTaskProofFile(null)
     setTaskProofModalOpen(true)
   }
 
@@ -1654,11 +1656,22 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     setActionError("")
 
     try {
-      await apiPatch(`/api/tasks/${selectedTaskForProof.id}/proof`, {
-        proof_type: taskProofForm.proof_type,
-        proof_link: taskProofForm.proof_link,
-        proof_note: taskProofForm.proof_note,
-      })
+      const payload = new FormData()
+      payload.append("proof_type", taskProofForm.proof_type)
+      payload.append("proof_note", taskProofForm.proof_note)
+
+      if (taskProofForm.proof_type === "PDF Upload") {
+        if (!taskProofFile) {
+          setActionError("Please choose a PDF file.")
+          return
+        }
+
+        payload.append("proof_file", taskProofFile)
+      } else {
+        payload.append("proof_link", taskProofForm.proof_link)
+      }
+
+      await apiPatch(`/api/tasks/${selectedTaskForProof.id}/proof`, payload)
 
       await refreshData()
       setTaskProofModalOpen(false)
@@ -1740,6 +1753,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       proof_note: "",
       review_feedback: "",
     })
+    setTaskProofFile(null)
     setSelectedTaskForProof(null)
   }
 
@@ -3150,7 +3164,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                               <span>&bull;</span>
                               <span>Due {formatDate(task.dueDate)}</span>
                             </div>
-                            <div className="flex justify-end gap-2">
+                            <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
                               {(() => {
                                 const moveStatuses = isMember
                                   ? ["Pending", "In Progress"]
@@ -4954,20 +4968,33 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   <SelectContent>
                     <SelectItem value="GitHub Link">GitHub Link</SelectItem>
                     <SelectItem value="Live Demo">Live Demo</SelectItem>
+                    <SelectItem value="PDF Upload">PDF Upload</SelectItem>
                     <SelectItem value="PDF Link">PDF Link</SelectItem>
                     <SelectItem value="Drive Link">Drive Link</SelectItem>
                     <SelectItem value="Other Link">Other Link</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Proof Link</Label>
-                <Input
-                  placeholder="Paste GitHub, deployed app, PDF, or Drive link"
-                  value={taskProofForm.proof_link}
-                  onChange={(event) => setTaskProofForm((prev) => ({ ...prev, proof_link: event.target.value }))}
-                />
-              </div>
+              {taskProofForm.proof_type === "PDF Upload" ? (
+                <div className="space-y-2">
+                  <Label>Upload PDF</Label>
+                  <Input
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    onChange={(event) => setTaskProofFile(event.target.files?.[0] || null)}
+                  />
+                  <p className="text-xs text-muted-foreground">Upload your PDF proof directly from system.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Proof Link</Label>
+                  <Input
+                    placeholder="Paste GitHub, deployed app, PDF, or Drive link"
+                    value={taskProofForm.proof_link}
+                    onChange={(event) => setTaskProofForm((prev) => ({ ...prev, proof_link: event.target.value }))}
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Note</Label>
                 <Textarea

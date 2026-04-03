@@ -336,13 +336,19 @@ async function submitTaskProof(req, res) {
     const supportsProofWorkflow = await hasProofWorkflowColumns();
     const { id } = req.params;
     const { proof_type, proof_link, proof_note } = req.body;
+    const uploadedFile = req.file || null;
 
     if (!supportsProofWorkflow) {
       return res.status(503).json({ message: "Task proof workflow is not ready. Run the latest SQL migration first." });
     }
 
-    if (!proof_type || !proof_link) {
-      return res.status(400).json({ message: "proof_type and proof_link are required." });
+    const resolvedProofType = String(proof_type || "").trim();
+    const resolvedProofLink = uploadedFile
+      ? `${req.protocol}://${req.get("host")}/uploads/task-proofs/${uploadedFile.filename}`
+      : String(proof_link || "").trim();
+
+    if (!resolvedProofType || !resolvedProofLink) {
+      return res.status(400).json({ message: "Submit a proof type and either a proof link or PDF file." });
     }
 
     const [taskRows] = await db.execute(
@@ -375,7 +381,7 @@ async function submitTaskProof(req, res) {
            proof_reviewed_by_user_id = NULL,
            proof_reviewed_at = NULL
        WHERE id = ?`,
-      [proof_type, proof_link, proof_note || null, id]
+      [resolvedProofType, resolvedProofLink, proof_note || null, id]
     );
 
     await logActivity({

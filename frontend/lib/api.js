@@ -243,21 +243,21 @@ export function apiGet(path) {
 export function apiPost(path, body) {
   return apiRequest(path, {
     method: "POST",
-    body: JSON.stringify(body),
+    body: body instanceof FormData ? body : JSON.stringify(body),
   })
 }
 
 export function apiPatch(path, body) {
   return apiRequest(path, {
     method: "PATCH",
-    body: JSON.stringify(body),
+    body: body instanceof FormData ? body : JSON.stringify(body),
   })
 }
 
 export function apiPut(path, body) {
   return apiRequest(path, {
     method: "PUT",
-    body: JSON.stringify(body),
+    body: body instanceof FormData ? body : JSON.stringify(body),
   })
 }
 

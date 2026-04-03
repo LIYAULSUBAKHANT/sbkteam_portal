@@ -26,6 +26,7 @@ const server = http.createServer(app);
 
 app.use(cors({ origin: "*" }));
 app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get("/", (req, res) => {
   res.json({ message: "SBK Team Management backend is running." });
