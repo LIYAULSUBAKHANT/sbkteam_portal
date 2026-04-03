@@ -3231,7 +3231,16 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     const leaderPoints = rankedPool[0]?.activity_points || 0
     const activityVsLeader = leaderPoints ? Math.min(Math.round(((currentUser?.activity_points || 0) / leaderPoints) * 100), 100) : 0
     const activityVsAverage = cohortAverageActivity ? Math.min(Math.round(((currentUser?.activity_points || 0) / cohortAverageActivity) * 100), 100) : 0
-    const executionScore = Math.round((taskProgress * 0.6) + (skillProgress * 0.4))
+    const executionInputs = [
+      { progress: taskProgress, weight: 0.6, hasAssignments: userTasks.length > 0 },
+      { progress: skillProgress, weight: 0.4, hasAssignments: userSkills.length > 0 },
+    ].filter((item) => item.hasAssignments)
+    const executionWeightTotal = executionInputs.reduce((sum, item) => sum + item.weight, 0)
+    const executionScore = executionWeightTotal > 0
+      ? Math.round(
+        executionInputs.reduce((sum, item) => sum + (item.progress * item.weight), 0) / executionWeightTotal
+      )
+      : 0
     const spotlightRingData = [
       { key: "leader", label: "Top Performer", value: activityVsLeader, fill: "var(--color-leader)" },
       { key: "average", label: "Vs Average", value: activityVsAverage, fill: "var(--color-average)" },
