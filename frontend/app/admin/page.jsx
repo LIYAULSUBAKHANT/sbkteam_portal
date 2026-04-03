@@ -2835,15 +2835,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
         </div>
 
         <div className="overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(135deg,#111827,#0f172a_55%,#020617)] shadow-[0_32px_80px_rgba(2,6,23,0.55)]">
-          <div className="flex flex-col gap-6 p-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs uppercase tracking-[0.32em] text-emerald-300/80">Task Command Desk</p>
-              <h3 className="mt-3 text-3xl font-semibold tracking-tight text-white">Professional task tracking with clearer priority and better readability</h3>
-              <p className="mt-3 text-sm leading-6 text-slate-300">
-                High-contrast task monitoring built for real daily use. Urgent work stands out first, while every card stays readable without washed-out colors.
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-2xl border border-rose-400/20 bg-slate-950/80 px-4 py-3">
                 <p className="text-[11px] uppercase tracking-[0.26em] text-rose-200/75">Overdue</p>
                 <p className="mt-2 text-3xl font-semibold text-white">{overdueTasks.length}</p>
@@ -2864,7 +2856,6 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 <p className="mt-2 text-3xl font-semibold text-white">{groupedTasks.Done.length}</p>
                 <p className="mt-1 text-xs text-emerald-100/75">Completed work stays reviewable</p>
               </div>
-            </div>
           </div>
         </div>
 
@@ -2993,7 +2984,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-foreground">Weekly Skills</h2>
-            <p className="text-muted-foreground">Backend skill assignments by user</p>
+            <p className="text-muted-foreground">Assigned skills and progress tracking</p>
           </div>
           {permissions.canAssignSkills ? (
             <Button onClick={() => setSkillModalOpen(true)} className="bg-primary hover:bg-primary/90">
@@ -3002,55 +2993,51 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           ) : null}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card className="border border-border shadow-sm">
-            <CardContent className="p-6">
-              <p className="text-sm text-muted-foreground">Completed</p>
-              <p className="text-2xl font-bold text-foreground">{visibleSkills.filter((skill) => skill.status === "Completed").length}</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-border shadow-sm">
-            <CardContent className="p-6">
-              <p className="text-sm text-muted-foreground">In Progress</p>
-              <p className="text-2xl font-bold text-foreground">{visibleSkills.filter((skill) => skill.status === "In Progress").length}</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-border shadow-sm">
-            <CardContent className="p-6">
-              <p className="text-sm text-muted-foreground">Pending</p>
-              <p className="text-2xl font-bold text-foreground">{visibleSkills.filter((skill) => skill.status === "Pending").length}</p>
-            </CardContent>
-          </Card>
+        <div className="overflow-hidden rounded-[28px] border border-sky-500/20 bg-[linear-gradient(135deg,#0f172a,#0b1b34_58%,#082f49)] shadow-[0_28px_70px_rgba(2,6,23,0.45)]">
+          <div className="grid gap-3 p-5 sm:grid-cols-3">
+            <div className="rounded-2xl border border-emerald-400/20 bg-slate-950/70 p-5">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-emerald-200/70">Completed</p>
+              <p className="mt-3 text-3xl font-semibold text-white">{visibleSkills.filter((skill) => skill.status === "Completed").length}</p>
+            </div>
+            <div className="rounded-2xl border border-sky-400/20 bg-slate-950/70 p-5">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-sky-200/70">In Progress</p>
+              <p className="mt-3 text-3xl font-semibold text-white">{visibleSkills.filter((skill) => skill.status === "In Progress").length}</p>
+            </div>
+            <div className="rounded-2xl border border-amber-300/20 bg-slate-950/70 p-5">
+              <p className="text-[11px] uppercase tracking-[0.26em] text-amber-100/70">Pending</p>
+              <p className="mt-3 text-3xl font-semibold text-white">{visibleSkills.filter((skill) => skill.status === "Pending").length}</p>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-4">
           {membersWithSkills.map((member) => (
-            <Card key={member.id} className="border border-border shadow-sm">
-              <CardHeader className="pb-3">
+            <Card key={member.id} className="overflow-hidden border-sky-500/20 bg-[linear-gradient(145deg,#0f172a,#0b1b34_58%,#111827)] shadow-[0_22px_50px_rgba(2,6,23,0.42)]">
+              <CardHeader className="border-b border-white/8 pb-4">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary/10 text-primary">{member.avatar}</AvatarFallback>
+                    <AvatarFallback className="bg-sky-400/15 text-sky-200">{member.avatar}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <CardTitle className="text-base font-semibold text-foreground">{member.name}</CardTitle>
-                    <div className="mt-1 flex items-center gap-1.5 text-xs text-primary">
+                    <CardTitle className="text-base font-semibold text-white">{member.name}</CardTitle>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-sky-300">
                       {(() => {
                         const MemberRoleIcon = roleIcons[member.role] || Circle
                         return <MemberRoleIcon className="h-3.5 w-3.5" />
                       })()}
                       <span>{member.role}</span>
                     </div>
-                    <CardDescription>{member.team} • {member.role}</CardDescription>
+                    <CardDescription className="text-slate-400">{member.team} • {member.role}</CardDescription>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-5">
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {groupedByMember[member.id].map((skill) => (
-                    <div key={skill.id} className="rounded-lg border border-border bg-muted/50 p-3">
-                      <div className="mb-2 flex items-start justify-between gap-3">
+                    <div key={skill.id} className="rounded-[22px] border border-white/10 bg-slate-950/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+                      <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
-                          <h4 className="text-sm font-medium text-foreground">{skill.skillName}</h4>
+                          <h4 className="text-sm font-semibold text-white">{skill.skillName}</h4>
                           <Badge className={cn("mt-1 border text-xs", levelColors[skill.level])}>{skill.level}</Badge>
                         </div>
                         {(permissions.canEditAssignedSkills || permissions.canDeleteAssignedSkills) ? (
@@ -3072,19 +3059,24 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                           </div>
                         ) : null}
                       </div>
-                      <p className="mb-2 text-xs text-muted-foreground">{skill.description}</p>
-                      <div className="mb-2 flex items-center justify-between">
-                        <Badge variant={skill.status === "Completed" ? "default" : skill.status === "In Progress" ? "secondary" : "outline"}>
+                      <p className="mb-3 text-sm leading-6 text-slate-300">{skill.description}</p>
+                      <div className="mb-3 flex items-center justify-between">
+                        <Badge className={cn(
+                          "border",
+                          skill.status === "Completed" && "border-emerald-400/25 bg-emerald-400/12 text-emerald-200",
+                          skill.status === "In Progress" && "border-sky-400/25 bg-sky-400/12 text-sky-200",
+                          skill.status === "Pending" && "border-amber-300/25 bg-amber-300/12 text-amber-100"
+                        )}>
                           {skill.status}
                         </Badge>
                         {skill.status !== "Completed" && member.id === currentUser?.id ? (
                           <Button size="sm" variant="ghost" onClick={() => handleMarkSkillComplete(skill.id)}>
                             Complete
                           </Button>
-                        ) : null}
+                          ) : null}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        <span className="mr-1">Assigned by</span>
+                      <div className="text-xs text-slate-400">
+                        <span className="mr-1 uppercase tracking-[0.18em]">Assigned by</span>
                         <div className="mt-2">
                           {renderMemberIdentity(
                             getMemberById(skill.assignedByUserId) || getMemberByName(skill.assignedBy),
@@ -3101,11 +3093,11 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           ))}
 
           {membersWithSkills.length === 0 ? (
-            <Card className="border border-border shadow-sm">
+            <Card className="border border-white/10 bg-slate-950/70 shadow-sm">
               <CardContent className="py-12 text-center">
-                <GraduationCap className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                <h3 className="mb-2 text-lg font-semibold text-foreground">No Skills Assigned Yet</h3>
-                <p className="text-muted-foreground">Skills will appear here when the backend returns assignments.</p>
+                <GraduationCap className="mx-auto mb-4 h-12 w-12 text-slate-500" />
+                <h3 className="mb-2 text-lg font-semibold text-white">No Skills Assigned Yet</h3>
+                <p className="text-slate-400">Skills will appear here when the backend returns assignments.</p>
               </CardContent>
             </Card>
           ) : null}
@@ -3380,22 +3372,27 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[0.85fr,1.15fr]">
-          <Card className="border border-border shadow-sm">
+          <Card className="overflow-hidden border-sky-500/20 bg-[linear-gradient(160deg,#0f172a,#0b1b34_58%,#111827)] shadow-[0_22px_50px_rgba(2,6,23,0.42)]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold text-foreground">Skills Status</CardTitle>
-              <CardDescription>Track weekly skill assignments and completion state</CardDescription>
+              <CardTitle className="text-lg font-semibold text-white">Skills Status</CardTitle>
+              <CardDescription className="text-slate-400">Track weekly skill assignments and completion state</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {userSkills.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No skills assigned yet.</p>
+                <p className="text-sm text-slate-400">No skills assigned yet.</p>
               ) : (
                 userSkills.map((skill) => (
-                  <div key={skill.id} className="flex items-start justify-between gap-4 rounded-lg border border-border bg-muted/30 p-4">
+                  <div key={skill.id} className="flex items-start justify-between gap-4 rounded-[22px] border border-white/10 bg-slate-950/70 p-4">
                     <div className="min-w-0">
-                      <p className="font-medium text-foreground">{skill.skillName}</p>
-                      <p className="text-sm text-muted-foreground">{skill.description}</p>
+                      <p className="font-medium text-white">{skill.skillName}</p>
+                      <p className="text-sm text-slate-400">{skill.description}</p>
                     </div>
-                    <Badge variant={skill.status === "Completed" ? "default" : skill.status === "In Progress" ? "secondary" : "outline"}>
+                    <Badge className={cn(
+                      "border",
+                      skill.status === "Completed" && "border-emerald-400/25 bg-emerald-400/12 text-emerald-200",
+                      skill.status === "In Progress" && "border-sky-400/25 bg-sky-400/12 text-sky-200",
+                      skill.status === "Pending" && "border-amber-300/25 bg-amber-300/12 text-amber-100"
+                    )}>
                       {skill.status}
                     </Badge>
                   </div>
