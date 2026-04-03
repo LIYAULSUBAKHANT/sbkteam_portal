@@ -117,7 +117,7 @@ const levelColors = {
   Expert: "bg-amber-100 text-amber-800 border-amber-200",
 }
 
-const taskStatusOptions = ["All", "Pending", "In Progress"]
+const taskStatusOptions = ["All", "Pending", "In Progress", "Proof Submitted"]
 const roleOptions = [
   { label: "Captain", value: 1 },
   { label: "Vice Captain", value: 2 },
@@ -187,6 +187,25 @@ function formatExternalLink(value) {
   return `https://${raw}`
 }
 
+function renderExternalLink(value) {
+  const formattedLink = formatExternalLink(value)
+
+  if (!formattedLink) {
+    return <p className="mt-1 font-medium text-foreground break-all">Not set</p>
+  }
+
+  return (
+    <a
+      href={formattedLink}
+      target="_blank"
+      rel="noreferrer"
+      className="mt-1 inline-flex break-all font-medium text-primary transition-colors hover:text-primary/80 hover:underline"
+    >
+      {value}
+    </a>
+  )
+}
+
 function formatDate(value) {
   if (!value) return "Not set"
   const date = new Date(value)
@@ -246,6 +265,16 @@ function getTaskStatusClasses(status) {
     }
   }
 
+  if (status === "Proof Submitted") {
+    return {
+      column: "border border-violet-400/25 bg-slate-900 text-violet-100 shadow-[0_16px_34px_rgba(15,23,42,0.32)]",
+      card: "border border-slate-700/80 bg-slate-900 shadow-[0_18px_42px_rgba(2,6,23,0.36)]",
+      badge: "border-violet-400/25 bg-violet-400/12 text-violet-200",
+      icon: "text-violet-300",
+      rail: "from-violet-400 via-fuchsia-300 to-sky-300",
+    }
+  }
+
   return {
     column: "border border-amber-400/25 bg-slate-900 text-amber-100 shadow-[0_16px_34px_rgba(15,23,42,0.32)]",
     card: "border border-slate-700/80 bg-slate-900 shadow-[0_18px_42px_rgba(2,6,23,0.36)]",
@@ -271,6 +300,14 @@ function getTaskUrgency(task) {
       tone: "done",
       label: "Completed",
       detail: `Finished with due date ${formatDate(task.dueDate)}.`,
+    }
+  }
+
+  if (task?.status === "Proof Submitted") {
+    return {
+      tone: "review",
+      label: "Awaiting Review",
+      detail: "Proof submitted. Waiting for leader approval.",
     }
   }
 
@@ -312,6 +349,7 @@ function getUrgencyBadgeClasses(tone) {
   if (tone === "today") return "border-orange-400/30 bg-orange-400/15 text-orange-100"
   if (tone === "soon") return "border-amber-400/30 bg-amber-400/15 text-amber-100"
   if (tone === "done") return "border-emerald-400/30 bg-emerald-400/15 text-emerald-100"
+  if (tone === "review") return "border-violet-400/30 bg-violet-400/15 text-violet-100"
   if (tone === "upcoming") return "border-slate-400/30 bg-slate-400/15 text-slate-100"
   return "border-border/60 bg-white/5 text-slate-300"
 }
@@ -549,6 +587,14 @@ function normalizeTask(task) {
     completedAt: task.completed_at,
     createdAt: task.created_at,
     updatedAt: task.updated_at,
+    proofType: task.proof_type || "",
+    proofLink: task.proof_link || "",
+    proofNote: task.proof_note || "",
+    proofSubmittedAt: task.proof_submitted_at,
+    proofReviewFeedback: task.proof_review_feedback || "",
+    proofReviewedByUserId: String(task.proof_reviewed_by_user_id || ""),
+    proofReviewedByName: task.proof_reviewed_by_name || "",
+    proofReviewedAt: task.proof_reviewed_at,
     projectId: String(task.project_id),
     project: task.project_name || "Unknown project",
     assignee: task.assigned_to_name || "Unassigned",
@@ -721,6 +767,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   const [teamModalOpen, setTeamModalOpen] = useState(false)
   const [projectModalOpen, setProjectModalOpen] = useState(false)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
+  const [taskProofModalOpen, setTaskProofModalOpen] = useState(false)
   const [skillModalOpen, setSkillModalOpen] = useState(false)
   const [announcementModalOpen, setAnnouncementModalOpen] = useState(false)
   const [announcementInsightsOpen, setAnnouncementInsightsOpen] = useState(false)
@@ -732,6 +779,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   const [editingTeamId, setEditingTeamId] = useState(null)
   const [editingProjectId, setEditingProjectId] = useState(null)
   const [editingTaskId, setEditingTaskId] = useState(null)
+  const [selectedTaskForProof, setSelectedTaskForProof] = useState(null)
   const [editingSkillId, setEditingSkillId] = useState(null)
   const [editingAnnouncementId, setEditingAnnouncementId] = useState(null)
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null)
@@ -765,6 +813,12 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     assigned_to_user_ids: [],
     priority: "Medium",
     due_date: "",
+  })
+  const [taskProofForm, setTaskProofForm] = useState({
+    proof_type: "GitHub Link",
+    proof_link: "",
+    proof_note: "",
+    review_feedback: "",
   })
   const [skillForm, setSkillForm] = useState({
     user_ids: [],
@@ -1581,6 +1635,58 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     }
   }
 
+  function openTaskProofModal(task) {
+    setSelectedTaskForProof(task)
+    setTaskProofForm({
+      proof_type: task.proofType || "GitHub Link",
+      proof_link: task.proofLink || "",
+      proof_note: task.proofNote || "",
+      review_feedback: "",
+    })
+    setTaskProofModalOpen(true)
+  }
+
+  async function handleSubmitTaskProof() {
+    if (!selectedTaskForProof) {
+      return
+    }
+
+    setActionError("")
+
+    try {
+      await apiPatch(`/api/tasks/${selectedTaskForProof.id}/proof`, {
+        proof_type: taskProofForm.proof_type,
+        proof_link: taskProofForm.proof_link,
+        proof_note: taskProofForm.proof_note,
+      })
+
+      await refreshData()
+      setTaskProofModalOpen(false)
+      resetTaskProofForm()
+      setActionMessage("Proof submitted successfully.")
+    } catch (error) {
+      setActionError(error.message || "Failed to submit proof.")
+    }
+  }
+
+  async function handleReviewTaskProof(task, decision) {
+    setActionError("")
+
+    try {
+      await apiPatch(`/api/tasks/${task.id}/proof/review`, {
+        decision,
+        feedback: taskProofForm.review_feedback,
+      })
+
+      await refreshData()
+      setTaskProofModalOpen(false)
+      resetTaskProofForm()
+      setActionMessage(decision === "approve" ? "Task approved successfully." : "Task sent back for rework.")
+    } catch (error) {
+      setActionError(error.message || "Failed to review task proof.")
+    }
+  }
+
   async function handleMarkSkillComplete(skillId) {
     setActionError("")
     try {
@@ -1625,6 +1731,16 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   function resetTaskForm() {
     setTaskForm({ title: "", description: "", project_id: "", assigned_to_user_ids: [], priority: "Medium", due_date: "" })
     setEditingTaskId(null)
+  }
+
+  function resetTaskProofForm() {
+    setTaskProofForm({
+      proof_type: "GitHub Link",
+      proof_link: "",
+      proof_note: "",
+      review_feedback: "",
+    })
+    setSelectedTaskForProof(null)
   }
 
   function resetSkillForm() {
@@ -2452,15 +2568,15 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
               </div>
               <div className="rounded-lg bg-muted/50 p-4">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">GitHub</p>
-                <p className="mt-1 font-medium text-foreground break-all">{currentUser?.github || "Not set"}</p>
+                {renderExternalLink(currentUser?.github)}
               </div>
               <div className="rounded-lg bg-muted/50 p-4">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">LinkedIn</p>
-                <p className="mt-1 font-medium text-foreground break-all">{currentUser?.linkedin || "Not set"}</p>
+                {renderExternalLink(currentUser?.linkedin)}
               </div>
               <div className="rounded-lg bg-muted/50 p-4">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">LeetCode</p>
-                <p className="mt-1 font-medium text-foreground break-all">{currentUser?.leetcode || "Not set"}</p>
+                {renderExternalLink(currentUser?.leetcode)}
               </div>
             </div>
           </CardContent>
@@ -2870,8 +2986,9 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
     const groupedTasks = {
       Pending: filteredTasks.filter((task) => task.status === "Pending"),
       "In Progress": filteredTasks.filter((task) => task.status === "In Progress"),
+      "Proof Submitted": filteredTasks.filter((task) => task.status === "Proof Submitted"),
     }
-    const statusesToShow = taskStatusFilter === "All" ? ["Pending", "In Progress"] : [taskStatusFilter]
+    const statusesToShow = taskStatusFilter === "All" ? ["Pending", "In Progress", "Proof Submitted"] : [taskStatusFilter]
     const historyMembers = teamTaskProgress.map(({ member }) => member)
 
     return (
@@ -2969,7 +3086,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
         </div>
 
         {taskBoardMode === "live" ? (
-          <div className={cn("grid gap-6", statusesToShow.length === 1 ? "md:grid-cols-1" : "md:grid-cols-2")}>
+          <div className={cn("grid gap-6", statusesToShow.length === 1 ? "md:grid-cols-1" : statusesToShow.length === 2 ? "md:grid-cols-2" : "xl:grid-cols-3")}>
             {statusesToShow.map((status) => {
               const statusClasses = getTaskStatusClasses(status)
 
@@ -2978,6 +3095,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   <div className={cn("flex items-center gap-2 rounded-2xl px-4 py-3", statusClasses.column)}>
                     {status === "Pending" ? <Circle className={cn("h-4 w-4", statusClasses.icon)} /> : null}
                     {status === "In Progress" ? <AlertCircle className={cn("h-4 w-4", statusClasses.icon)} /> : null}
+                    {status === "Proof Submitted" ? <Eye className={cn("h-4 w-4", statusClasses.icon)} /> : null}
                     <span className="font-medium text-white">{status}</span>
                     <Badge className={cn("ml-auto border", statusClasses.badge)}>
                       {groupedTasks[status].length}
@@ -3011,6 +3129,20 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                               </div>
                             </div>
                             <p className="mb-4 text-sm leading-7 text-slate-300">{task.description}</p>
+                            {task.proofLink ? (
+                              <div className="mb-4 rounded-2xl border border-violet-400/20 bg-violet-400/10 p-3">
+                                <p className="text-[11px] uppercase tracking-[0.2em] text-violet-100/70">Proof Submitted</p>
+                                <div className="mt-2 text-sm">
+                                  {renderExternalLink(task.proofLink)}
+                                </div>
+                                {task.proofNote ? (
+                                  <p className="mt-2 text-sm text-slate-300">{task.proofNote}</p>
+                                ) : null}
+                                {task.proofReviewFeedback ? (
+                                  <p className="mt-2 text-xs text-amber-100">Feedback: {task.proofReviewFeedback}</p>
+                                ) : null}
+                              </div>
+                            ) : null}
                             <div className="mb-5 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400">
                               <span>{task.assignee}</span>
                               <span>&bull;</span>
@@ -3019,6 +3151,26 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                               <span>Due {formatDate(task.dueDate)}</span>
                             </div>
                             <div className="flex justify-end gap-2">
+                              {(() => {
+                                const moveStatuses = isMember
+                                  ? ["Pending", "In Progress"]
+                                  : ["Pending", "In Progress", "Proof Submitted", "Done"]
+
+                                return (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm">Move</Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                      {moveStatuses.map((nextStatus) => (
+                                        <DropdownMenuItem key={nextStatus} onClick={() => handleTaskStatusChange(task.id, nextStatus)}>
+                                          {nextStatus}
+                                        </DropdownMenuItem>
+                                      ))}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )
+                              })()}
                               {permissions.canDeleteRecords ? (
                                 <Button variant="secondary" size="sm" onClick={() => openTaskEditModal(task)}>
                                   Edit
@@ -3033,18 +3185,21 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                                   Delete
                                 </Button>
                               ) : null}
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">Move</Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                  {["Pending", "In Progress", "Done"].map((nextStatus) => (
-                                    <DropdownMenuItem key={nextStatus} onClick={() => handleTaskStatusChange(task.id, nextStatus)}>
-                                      {nextStatus}
-                                    </DropdownMenuItem>
-                                  ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              {String(task.assignedTo) === String(currentUser?.id || "") && task.status !== "Done" && task.status !== "Proof Submitted" ? (
+                                <Button variant="secondary" size="sm" onClick={() => openTaskProofModal(task)}>
+                                  Submit Proof
+                                </Button>
+                              ) : null}
+                              {!isMember && task.status === "Proof Submitted" ? (
+                                <Button size="sm" onClick={() => handleReviewTaskProof(task, "approve")}>
+                                  Approve
+                                </Button>
+                              ) : null}
+                              {!isMember && task.status === "Proof Submitted" ? (
+                                <Button variant="secondary" size="sm" onClick={() => handleReviewTaskProof(task, "reject")}>
+                                  Reject
+                                </Button>
+                              ) : null}
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -3181,6 +3336,15 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                             </div>
                           </div>
                         </div>
+                        {task.proofLink ? (
+                          <div className="rounded-2xl border border-violet-400/20 bg-violet-400/10 p-3">
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-violet-100/70">Accepted Proof</p>
+                            <div className="mt-2 text-sm">
+                              {renderExternalLink(task.proofLink)}
+                            </div>
+                            {task.proofNote ? <p className="mt-2 text-sm text-slate-300">{task.proofNote}</p> : null}
+                          </div>
+                        ) : null}
 
                         <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-3">
                           <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
@@ -3841,15 +4005,15 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 </div>
                 <div className="rounded-lg bg-muted/50 p-4">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">LinkedIn</p>
-                  <p className="mt-1 font-medium text-foreground break-all">{currentUser?.linkedin || "Not set"}</p>
+                  {renderExternalLink(currentUser?.linkedin)}
                 </div>
                 <div className="rounded-lg bg-muted/50 p-4">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">GitHub</p>
-                  <p className="mt-1 font-medium text-foreground break-all">{currentUser?.github || "Not set"}</p>
+                  {renderExternalLink(currentUser?.github)}
                 </div>
                 <div className="rounded-lg bg-muted/50 p-4">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">LeetCode</p>
-                  <p className="mt-1 font-medium text-foreground break-all">{currentUser?.leetcode || "Not set"}</p>
+                  {renderExternalLink(currentUser?.leetcode)}
                 </div>
               </div>
             </CardContent>
@@ -4464,15 +4628,21 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   <div className="mt-4 space-y-3">
                     <div className="rounded-lg bg-muted/40 p-4">
                       <p className="text-xs uppercase tracking-wide text-muted-foreground">LinkedIn</p>
-                      <p className="mt-2 text-sm font-medium text-foreground truncate">{selectedMember?.linkedin || "Not set"}</p>
+                      <div className="mt-2 text-sm">
+                        {renderExternalLink(selectedMember?.linkedin)}
+                      </div>
                     </div>
                     <div className="rounded-lg bg-muted/40 p-4">
                       <p className="text-xs uppercase tracking-wide text-muted-foreground">GitHub</p>
-                      <p className="mt-2 text-sm font-medium text-foreground truncate">{selectedMember?.github || "Not set"}</p>
+                      <div className="mt-2 text-sm">
+                        {renderExternalLink(selectedMember?.github)}
+                      </div>
                     </div>
                     <div className="rounded-lg bg-muted/40 p-4">
                       <p className="text-xs uppercase tracking-wide text-muted-foreground">LeetCode</p>
-                      <p className="mt-2 text-sm font-medium text-foreground truncate">{selectedMember?.leetcode || "Not set"}</p>
+                      <div className="mt-2 text-sm">
+                        {renderExternalLink(selectedMember?.leetcode)}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -4761,6 +4931,55 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
             <DialogFooter>
               <Button variant="outline" onClick={() => setTaskModalOpen(false)}>Cancel</Button>
               <Button onClick={handleSaveTask}>{editingTaskId ? "Save Changes" : "Create Task"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={taskProofModalOpen} onOpenChange={(open) => {
+          setTaskProofModalOpen(open)
+          if (!open) resetTaskProofForm()
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Submit Task Proof</DialogTitle>
+              <DialogDescription>
+                {selectedTaskForProof ? `Share proof for ${selectedTaskForProof.title}.` : "Submit your completion proof."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Proof Type</Label>
+                <Select value={taskProofForm.proof_type} onValueChange={(value) => setTaskProofForm((prev) => ({ ...prev, proof_type: value }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="GitHub Link">GitHub Link</SelectItem>
+                    <SelectItem value="Live Demo">Live Demo</SelectItem>
+                    <SelectItem value="PDF Link">PDF Link</SelectItem>
+                    <SelectItem value="Drive Link">Drive Link</SelectItem>
+                    <SelectItem value="Other Link">Other Link</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Proof Link</Label>
+                <Input
+                  placeholder="Paste GitHub, deployed app, PDF, or Drive link"
+                  value={taskProofForm.proof_link}
+                  onChange={(event) => setTaskProofForm((prev) => ({ ...prev, proof_link: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Note</Label>
+                <Textarea
+                  placeholder="Add a short summary of what you completed"
+                  value={taskProofForm.proof_note}
+                  onChange={(event) => setTaskProofForm((prev) => ({ ...prev, proof_note: event.target.value }))}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setTaskProofModalOpen(false)}>Cancel</Button>
+              <Button onClick={handleSubmitTaskProof}>Submit Proof</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

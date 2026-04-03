@@ -91,15 +91,24 @@ CREATE TABLE IF NOT EXISTS tasks (
   priority VARCHAR(50) NOT NULL DEFAULT 'Medium',
   due_date DATETIME NULL,
   completed_at DATETIME NULL,
+  proof_type VARCHAR(50) NULL,
+  proof_link VARCHAR(500) NULL,
+  proof_note TEXT NULL,
+  proof_submitted_at DATETIME NULL,
+  proof_review_feedback TEXT NULL,
+  proof_reviewed_by_user_id INT NULL,
+  proof_reviewed_at DATETIME NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY idx_tasks_project_id (project_id),
   KEY idx_tasks_assigned_to_user_id (assigned_to_user_id),
   KEY idx_tasks_created_by_user_id (created_by_user_id),
+  KEY idx_tasks_proof_reviewed_by_user_id (proof_reviewed_by_user_id),
   CONSTRAINT fk_tasks_project FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
   CONSTRAINT fk_tasks_assigned_user FOREIGN KEY (assigned_to_user_id) REFERENCES users (id) ON DELETE CASCADE,
-  CONSTRAINT fk_tasks_created_by_user FOREIGN KEY (created_by_user_id) REFERENCES users (id) ON DELETE SET NULL
+  CONSTRAINT fk_tasks_created_by_user FOREIGN KEY (created_by_user_id) REFERENCES users (id) ON DELETE SET NULL,
+  CONSTRAINT fk_tasks_proof_reviewed_by_user FOREIGN KEY (proof_reviewed_by_user_id) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS skills (

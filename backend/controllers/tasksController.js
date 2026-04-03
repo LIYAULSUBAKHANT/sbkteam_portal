@@ -3,16 +3,35 @@ const { logActivity } = require("./activityLogController");
 const { emitDataChanged } = require("../socket");
 const { ensureDiscussionThread } = require("../services/discussionsService");
 
-let hasCompletedAtColumnCache = null;
+let taskColumnSetCache = null;
 
-async function hasCompletedAtColumn() {
-  if (hasCompletedAtColumnCache !== null) {
-    return hasCompletedAtColumnCache;
+async function getTaskColumnSet() {
+  if (taskColumnSetCache) {
+    return taskColumnSetCache;
   }
 
-  const [rows] = await db.execute("SHOW COLUMNS FROM tasks LIKE 'completed_at'");
-  hasCompletedAtColumnCache = rows.length > 0;
-  return hasCompletedAtColumnCache;
+  const [rows] = await db.execute("SHOW COLUMNS FROM tasks");
+  taskColumnSetCache = new Set(rows.map((row) => row.Field));
+  return taskColumnSetCache;
+}
+
+async function hasCompletedAtColumn() {
+  const columns = await getTaskColumnSet();
+  return columns.has("completed_at");
+}
+
+async function hasProofWorkflowColumns() {
+  const columns = await getTaskColumnSet();
+
+  return [
+    "proof_type",
+    "proof_link",
+    "proof_note",
+    "proof_submitted_at",
+    "proof_review_feedback",
+    "proof_reviewed_by_user_id",
+    "proof_reviewed_at",
+  ].every((column) => columns.has(column));
 }
 
 async function createTask(req, res) {
@@ -104,6 +123,7 @@ async function createTask(req, res) {
 async function getTasks(req, res) {
   try {
     const supportsCompletionHistory = await hasCompletedAtColumn();
+    const supportsProofWorkflow = await hasProofWorkflowColumns();
     const isMember = req.user.roleKey === "member";
     const values = [];
     let whereClause = "";
@@ -122,6 +142,14 @@ async function getTasks(req, res) {
         t.priority,
         t.due_date,
         ${supportsCompletionHistory ? "t.completed_at" : "NULL AS completed_at"},
+        ${supportsProofWorkflow ? "t.proof_type" : "NULL AS proof_type"},
+        ${supportsProofWorkflow ? "t.proof_link" : "NULL AS proof_link"},
+        ${supportsProofWorkflow ? "t.proof_note" : "NULL AS proof_note"},
+        ${supportsProofWorkflow ? "t.proof_submitted_at" : "NULL AS proof_submitted_at"},
+        ${supportsProofWorkflow ? "t.proof_review_feedback" : "NULL AS proof_review_feedback"},
+        ${supportsProofWorkflow ? "t.proof_reviewed_by_user_id" : "NULL AS proof_reviewed_by_user_id"},
+        ${supportsProofWorkflow ? "ru.full_name AS proof_reviewed_by_name" : "NULL AS proof_reviewed_by_name"},
+        ${supportsProofWorkflow ? "t.proof_reviewed_at" : "NULL AS proof_reviewed_at"},
         t.project_id,
         p.name AS project_name,
         t.assigned_to_user_id,
@@ -134,6 +162,7 @@ async function getTasks(req, res) {
       INNER JOIN projects p ON p.id = t.project_id
       INNER JOIN users au ON au.id = t.assigned_to_user_id
       LEFT JOIN users cu ON cu.id = t.created_by_user_id
+      ${supportsProofWorkflow ? "LEFT JOIN users ru ON ru.id = t.proof_reviewed_by_user_id" : ""}
       ${whereClause}
       ORDER BY t.id ASC`,
       values
@@ -168,6 +197,10 @@ async function updateTaskStatus(req, res) {
 
     if (req.user.roleKey === "member" && task.assigned_to_user_id !== req.user.id) {
       return res.status(403).json({ message: "Members can only update their own tasks." });
+    }
+
+    if (req.user.roleKey === "member" && status === "Done") {
+      return res.status(403).json({ message: "Submit proof before marking a task as completed." });
     }
 
     if (supportsCompletionHistory) {
@@ -298,6 +331,140 @@ async function updateTask(req, res) {
   }
 }
 
+async function submitTaskProof(req, res) {
+  try {
+    const supportsProofWorkflow = await hasProofWorkflowColumns();
+    const { id } = req.params;
+    const { proof_type, proof_link, proof_note } = req.body;
+
+    if (!supportsProofWorkflow) {
+      return res.status(503).json({ message: "Task proof workflow is not ready. Run the latest SQL migration first." });
+    }
+
+    if (!proof_type || !proof_link) {
+      return res.status(400).json({ message: "proof_type and proof_link are required." });
+    }
+
+    const [taskRows] = await db.execute(
+      "SELECT id, assigned_to_user_id, title, status FROM tasks WHERE id = ?",
+      [id]
+    );
+
+    if (taskRows.length === 0) {
+      return res.status(404).json({ message: "Task not found." });
+    }
+
+    const task = taskRows[0];
+
+    if (req.user.roleKey === "member" && task.assigned_to_user_id !== req.user.id) {
+      return res.status(403).json({ message: "Members can only submit proof for their own tasks." });
+    }
+
+    if (task.status === "Done") {
+      return res.status(400).json({ message: "Task is already completed." });
+    }
+
+    await db.execute(
+      `UPDATE tasks
+       SET status = 'Proof Submitted',
+           proof_type = ?,
+           proof_link = ?,
+           proof_note = ?,
+           proof_submitted_at = NOW(),
+           proof_review_feedback = NULL,
+           proof_reviewed_by_user_id = NULL,
+           proof_reviewed_at = NULL
+       WHERE id = ?`,
+      [proof_type, proof_link, proof_note || null, id]
+    );
+
+    await logActivity({
+      userId: req.user.id,
+      action: "submitted task proof",
+      targetType: "task",
+      targetId: Number(id),
+      targetLabel: task.title
+    });
+
+    emitDataChanged({ type: "task", action: "update", data: { id: Number(id) } });
+
+    return res.status(200).json({ message: "Proof submitted successfully." });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to submit task proof.", error: error.message });
+  }
+}
+
+async function reviewTaskProof(req, res) {
+  try {
+    const supportsProofWorkflow = await hasProofWorkflowColumns();
+    const supportsCompletionHistory = await hasCompletedAtColumn();
+    const { id } = req.params;
+    const { decision, feedback } = req.body;
+
+    if (!supportsProofWorkflow) {
+      return res.status(503).json({ message: "Task proof workflow is not ready. Run the latest SQL migration first." });
+    }
+
+    if (!["approve", "reject"].includes(String(decision || "").toLowerCase())) {
+      return res.status(400).json({ message: "decision must be approve or reject." });
+    }
+
+    const [taskRows] = await db.execute(
+      "SELECT id, title, status FROM tasks WHERE id = ?",
+      [id]
+    );
+
+    if (taskRows.length === 0) {
+      return res.status(404).json({ message: "Task not found." });
+    }
+
+    const task = taskRows[0];
+
+    if (task.status !== "Proof Submitted") {
+      return res.status(400).json({ message: "Only proof-submitted tasks can be reviewed." });
+    }
+
+    const isApproved = String(decision).toLowerCase() === "approve";
+
+    if (supportsCompletionHistory) {
+      await db.execute(
+        `UPDATE tasks
+         SET status = ?,
+             completed_at = CASE WHEN ? THEN NOW() ELSE NULL END,
+             proof_review_feedback = ?,
+             proof_reviewed_by_user_id = ?,
+             proof_reviewed_at = NOW()
+         WHERE id = ?`,
+        [isApproved ? "Done" : "In Progress", isApproved, feedback || null, req.user.id, id]
+      );
+    } else {
+      await db.execute(
+        `UPDATE tasks
+         SET status = ?,
+             proof_review_feedback = ?,
+             proof_reviewed_by_user_id = ?,
+             proof_reviewed_at = NOW()
+         WHERE id = ?`,
+        [isApproved ? "Done" : "In Progress", feedback || null, req.user.id, id]
+      );
+    }
+
+    await logActivity({
+      userId: req.user.id,
+      action: isApproved ? "approved task proof" : "rejected task proof",
+      targetType: "task",
+      targetId: Number(id),
+      targetLabel: task.title
+    });
+
+    emitDataChanged({ type: "task", action: "update", data: { id: Number(id) } });
+
+    return res.status(200).json({ message: isApproved ? "Task approved successfully." : "Task proof sent back for rework." });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to review task proof.", error: error.message });
+  }
+}
+
 async function deleteTask(req, res) {
   try {
     const { id } = req.params;
@@ -325,4 +492,12 @@ async function deleteTask(req, res) {
   }
 }
 
-module.exports = { createTask, getTasks, updateTaskStatus, updateTask, deleteTask };
+module.exports = {
+  createTask,
+  getTasks,
+  updateTaskStatus,
+  updateTask,
+  submitTaskProof,
+  reviewTaskProof,
+  deleteTask,
+};
