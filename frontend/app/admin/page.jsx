@@ -2813,21 +2813,34 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
         {renderBanner(actionMessage, "success")}
         {renderBanner(actionError)}
 
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <h2 className="text-2xl font-bold text-foreground">Tasks</h2>
-          <div className="flex flex-wrap gap-2">
-            {taskStatusOptions.map((status) => (
-              <Button
-                key={status}
-                variant={taskStatusFilter === status ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTaskStatusFilter(status)}
-              >
-                {status}
-              </Button>
-            ))}
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Tasks</h2>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="inline-flex flex-wrap items-center gap-2 rounded-2xl border border-border/70 bg-card/70 p-2 shadow-sm backdrop-blur">
+              {taskStatusOptions.map((status) => (
+                <Button
+                  key={status}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setTaskStatusFilter(status)}
+                  className={cn(
+                    "rounded-xl px-4 text-sm font-medium transition-colors",
+                    taskStatusFilter === status
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {status}
+                </Button>
+              ))}
+            </div>
             {permissions.canAssignTasks ? (
-              <Button onClick={() => setTaskModalOpen(true)} className="bg-primary hover:bg-primary/90">
+              <Button
+                onClick={() => setTaskModalOpen(true)}
+                className="rounded-2xl bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+              >
                 <Plus className="mr-2 h-4 w-4" /> Assign Task
               </Button>
             ) : null}
