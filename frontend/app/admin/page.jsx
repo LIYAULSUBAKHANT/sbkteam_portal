@@ -247,39 +247,39 @@ function getDayDifferenceFromToday(value) {
 function getTaskStatusClasses(status) {
   if (status === "Done") {
     return {
-      column: "border border-emerald-400/25 bg-slate-900 text-emerald-100 shadow-[0_16px_34px_rgba(15,23,42,0.32)]",
-      card: "border border-slate-700/80 bg-slate-900 shadow-[0_18px_42px_rgba(2,6,23,0.36)]",
-      badge: "border-emerald-400/25 bg-emerald-400/12 text-emerald-200",
-      icon: "text-emerald-300",
+      column: "border border-emerald-400/25 bg-emerald-50 text-emerald-700 shadow-sm dark:bg-slate-900 dark:text-emerald-100 dark:shadow-[0_16px_34px_rgba(15,23,42,0.32)]",
+      card: "border border-emerald-200/60 bg-card shadow-sm dark:border-slate-700/80 dark:bg-slate-900 dark:shadow-[0_18px_42px_rgba(2,6,23,0.36)]",
+      badge: "border-emerald-400/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
+      icon: "text-emerald-500 dark:text-emerald-300",
       rail: "from-emerald-400 via-emerald-300 to-teal-300",
     }
   }
 
   if (status === "In Progress") {
     return {
-      column: "border border-sky-400/25 bg-slate-900 text-sky-100 shadow-[0_16px_34px_rgba(15,23,42,0.32)]",
-      card: "border border-slate-700/80 bg-slate-900 shadow-[0_18px_42px_rgba(2,6,23,0.36)]",
-      badge: "border-sky-400/25 bg-sky-400/12 text-sky-200",
-      icon: "text-sky-300",
+      column: "border border-sky-400/25 bg-sky-50 text-sky-700 shadow-sm dark:bg-slate-900 dark:text-sky-100 dark:shadow-[0_16px_34px_rgba(15,23,42,0.32)]",
+      card: "border border-sky-200/60 bg-card shadow-sm dark:border-slate-700/80 dark:bg-slate-900 dark:shadow-[0_18px_42px_rgba(2,6,23,0.36)]",
+      badge: "border-sky-400/25 bg-sky-500/10 text-sky-700 dark:text-sky-200",
+      icon: "text-sky-500 dark:text-sky-300",
       rail: "from-sky-400 via-cyan-300 to-blue-300",
     }
   }
 
   if (status === "Proof Submitted") {
     return {
-      column: "border border-violet-400/25 bg-slate-900 text-violet-100 shadow-[0_16px_34px_rgba(15,23,42,0.32)]",
-      card: "border border-slate-700/80 bg-slate-900 shadow-[0_18px_42px_rgba(2,6,23,0.36)]",
-      badge: "border-violet-400/25 bg-violet-400/12 text-violet-200",
-      icon: "text-violet-300",
+      column: "border border-violet-400/25 bg-violet-50 text-violet-700 shadow-sm dark:bg-slate-900 dark:text-violet-100 dark:shadow-[0_16px_34px_rgba(15,23,42,0.32)]",
+      card: "border border-violet-200/60 bg-card shadow-sm dark:border-slate-700/80 dark:bg-slate-900 dark:shadow-[0_18px_42px_rgba(2,6,23,0.36)]",
+      badge: "border-violet-400/25 bg-violet-500/10 text-violet-700 dark:text-violet-200",
+      icon: "text-violet-500 dark:text-violet-300",
       rail: "from-violet-400 via-fuchsia-300 to-sky-300",
     }
   }
 
   return {
-    column: "border border-amber-400/25 bg-slate-900 text-amber-100 shadow-[0_16px_34px_rgba(15,23,42,0.32)]",
-    card: "border border-slate-700/80 bg-slate-900 shadow-[0_18px_42px_rgba(2,6,23,0.36)]",
-    badge: "border-amber-400/25 bg-amber-400/12 text-amber-200",
-    icon: "text-amber-300",
+    column: "border border-amber-400/25 bg-amber-50 text-amber-700 shadow-sm dark:bg-slate-900 dark:text-amber-100 dark:shadow-[0_16px_34px_rgba(15,23,42,0.32)]",
+    card: "border border-amber-200/60 bg-card shadow-sm dark:border-slate-700/80 dark:bg-slate-900 dark:shadow-[0_18px_42px_rgba(2,6,23,0.36)]",
+    badge: "border-amber-400/25 bg-amber-500/10 text-amber-700 dark:text-amber-200",
+    icon: "text-amber-500 dark:text-amber-300",
     rail: "from-amber-300 via-yellow-300 to-orange-300",
   }
 }
@@ -345,25 +345,25 @@ function getTaskUrgency(task) {
 }
 
 function getUrgencyBadgeClasses(tone) {
-  if (tone === "overdue") return "border-rose-400/30 bg-rose-400/15 text-rose-100"
-  if (tone === "today") return "border-orange-400/30 bg-orange-400/15 text-orange-100"
-  if (tone === "soon") return "border-amber-400/30 bg-amber-400/15 text-amber-100"
-  if (tone === "done") return "border-emerald-400/30 bg-emerald-400/15 text-emerald-100"
-  if (tone === "review") return "border-violet-400/30 bg-violet-400/15 text-violet-100"
-  if (tone === "upcoming") return "border-slate-400/30 bg-slate-400/15 text-slate-100"
-  return "border-border/60 bg-white/5 text-slate-300"
+  if (tone === "overdue") return "border-rose-400/30 bg-rose-500/10 text-rose-700 dark:text-rose-100"
+  if (tone === "today") return "border-orange-400/30 bg-orange-500/10 text-orange-700 dark:text-orange-100"
+  if (tone === "soon") return "border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-100"
+  if (tone === "done") return "border-emerald-400/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-100"
+  if (tone === "review") return "border-violet-400/30 bg-violet-500/10 text-violet-700 dark:text-violet-100"
+  if (tone === "upcoming") return "border-slate-400/30 bg-slate-500/10 text-slate-700 dark:text-slate-100"
+  return "border-border/60 bg-muted text-muted-foreground"
 }
 
 function getTaskPriorityClasses(priority) {
   if (priority === "High") {
-    return "border-rose-400/30 bg-rose-400/12 text-rose-100"
+    return "border-rose-400/30 bg-rose-500/10 text-rose-700 dark:text-rose-100"
   }
 
   if (priority === "Medium") {
-    return "border-amber-400/30 bg-amber-400/12 text-amber-100"
+    return "border-amber-400/30 bg-amber-500/10 text-amber-700 dark:text-amber-100"
   }
 
-  return "border-sky-400/30 bg-sky-400/12 text-sky-100"
+  return "border-sky-400/30 bg-sky-500/10 text-sky-700 dark:text-sky-100"
 }
 
 function formatRelativeTime(value) {
@@ -3074,27 +3074,27 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(135deg,#111827,#0f172a_55%,#020617)] shadow-[0_32px_80px_rgba(2,6,23,0.55)]">
+        <div className="overflow-hidden rounded-[28px] border border-border bg-[linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted))/0.65,hsl(var(--background)))] shadow-sm dark:border-slate-800 dark:bg-[linear-gradient(135deg,#111827,#0f172a_55%,#020617)] dark:shadow-[0_32px_80px_rgba(2,6,23,0.55)]">
           <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-rose-400/20 bg-slate-950/80 px-4 py-3">
+            <div className="rounded-2xl border border-rose-400/20 bg-card/80 px-4 py-3 dark:bg-slate-950/80">
               <p className="text-[11px] uppercase tracking-[0.26em] text-rose-200/75">Overdue</p>
-              <p className="mt-2 text-3xl font-semibold text-white">{overdueTasks.length}</p>
-              <p className="mt-1 text-xs text-rose-100/75">Need immediate attention</p>
+              <p className="mt-2 text-3xl font-semibold text-foreground dark:text-white">{overdueTasks.length}</p>
+              <p className="mt-1 text-xs text-rose-600 dark:text-rose-100/75">Need immediate attention</p>
             </div>
-            <div className="rounded-2xl border border-orange-400/20 bg-slate-950/80 px-4 py-3">
+            <div className="rounded-2xl border border-orange-400/20 bg-card/80 px-4 py-3 dark:bg-slate-950/80">
               <p className="text-[11px] uppercase tracking-[0.26em] text-orange-200/75">Due Today</p>
-              <p className="mt-2 text-3xl font-semibold text-white">{dueTodayTasks.length}</p>
-              <p className="mt-1 text-xs text-orange-100/75">Should close before day end</p>
+              <p className="mt-2 text-3xl font-semibold text-foreground dark:text-white">{dueTodayTasks.length}</p>
+              <p className="mt-1 text-xs text-orange-600 dark:text-orange-100/75">Should close before day end</p>
             </div>
-            <div className="rounded-2xl border border-amber-300/20 bg-slate-950/80 px-4 py-3">
+            <div className="rounded-2xl border border-amber-300/20 bg-card/80 px-4 py-3 dark:bg-slate-950/80">
               <p className="text-[11px] uppercase tracking-[0.26em] text-amber-100/75">Due Soon</p>
-              <p className="mt-2 text-3xl font-semibold text-white">{dueSoonTasks.length}</p>
-              <p className="mt-1 text-xs text-amber-100/75">Next two days pipeline</p>
+              <p className="mt-2 text-3xl font-semibold text-foreground dark:text-white">{dueSoonTasks.length}</p>
+              <p className="mt-1 text-xs text-amber-700 dark:text-amber-100/75">Next two days pipeline</p>
             </div>
-            <div className="rounded-2xl border border-emerald-400/20 bg-slate-950/80 px-4 py-3">
+            <div className="rounded-2xl border border-emerald-400/20 bg-card/80 px-4 py-3 dark:bg-slate-950/80">
               <p className="text-[11px] uppercase tracking-[0.26em] text-emerald-100/75">Task Archive</p>
-              <p className="mt-2 text-3xl font-semibold text-white">{completedTasksHistory.length}</p>
-              <p className="mt-1 text-xs text-emerald-100/75">Finished work stays reviewable</p>
+              <p className="mt-2 text-3xl font-semibold text-foreground dark:text-white">{completedTasksHistory.length}</p>
+              <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-100/75">Finished work stays reviewable</p>
             </div>
           </div>
         </div>
@@ -3110,7 +3110,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                     {status === "Pending" ? <Circle className={cn("h-4 w-4", statusClasses.icon)} /> : null}
                     {status === "In Progress" ? <AlertCircle className={cn("h-4 w-4", statusClasses.icon)} /> : null}
                     {status === "Proof Submitted" ? <Eye className={cn("h-4 w-4", statusClasses.icon)} /> : null}
-                    <span className="font-medium text-white">{status}</span>
+                    <span className="font-medium text-foreground dark:text-white">{status}</span>
                     <Badge className={cn("ml-auto border", statusClasses.badge)}>
                       {groupedTasks[status].length}
                     </Badge>
@@ -3128,10 +3128,10 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                             <div className="mb-3 flex items-start justify-between gap-3">
                               <div>
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <h4 className="text-base font-semibold leading-6 text-white">{task.title}</h4>
+                                  <h4 className="text-base font-semibold leading-6 text-foreground dark:text-white">{task.title}</h4>
                                   <Badge className={cn("border text-[11px]", taskStatusClasses.badge)}>{task.status}</Badge>
                                 </div>
-                                <p className="mt-2 text-xs text-slate-300">{urgency.detail}</p>
+                                <p className="mt-2 text-xs text-muted-foreground dark:text-slate-300">{urgency.detail}</p>
                               </div>
                               <div className="flex flex-wrap justify-end gap-2">
                                 <Badge className={cn("border text-xs", getTaskPriorityClasses(task.priority))}>
@@ -3142,22 +3142,22 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                                 </Badge>
                               </div>
                             </div>
-                            <p className="mb-4 text-sm leading-7 text-slate-300">{task.description}</p>
+                            <p className="mb-4 text-sm leading-7 text-muted-foreground dark:text-slate-300">{task.description}</p>
                             {task.proofLink ? (
                               <div className="mb-4 rounded-2xl border border-violet-400/20 bg-violet-400/10 p-3">
-                                <p className="text-[11px] uppercase tracking-[0.2em] text-violet-100/70">Proof Submitted</p>
+                                <p className="text-[11px] uppercase tracking-[0.2em] text-violet-700 dark:text-violet-100/70">Proof Submitted</p>
                                 <div className="mt-2 text-sm">
                                   {renderExternalLink(task.proofLink)}
                                 </div>
                                 {task.proofNote ? (
-                                  <p className="mt-2 text-sm text-slate-300">{task.proofNote}</p>
+                                  <p className="mt-2 text-sm text-muted-foreground dark:text-slate-300">{task.proofNote}</p>
                                 ) : null}
                                 {task.proofReviewFeedback ? (
                                   <p className="mt-2 text-xs text-amber-100">Feedback: {task.proofReviewFeedback}</p>
                                 ) : null}
                               </div>
                             ) : null}
-                            <div className="mb-5 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400">
+                            <div className="mb-5 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground dark:text-slate-400">
                               <span>{task.assignee}</span>
                               <span>&bull;</span>
                               <span>{task.project}</span>
@@ -3230,8 +3230,8 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                     })}
 
                     {groupedTasks[status].length === 0 ? (
-                      <Card className="rounded-[24px] border border-dashed border-white/10 bg-slate-950/70 shadow-sm">
-                        <CardContent className="py-12 text-center text-sm text-slate-400">
+                      <Card className="rounded-[24px] border border-dashed border-border bg-card/70 shadow-sm dark:border-white/10 dark:bg-slate-950/70">
+                        <CardContent className="py-12 text-center text-sm text-muted-foreground dark:text-slate-400">
                           No tasks in this status.
                         </CardContent>
                       </Card>
@@ -3244,15 +3244,15 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
         ) : (
           <div className="space-y-6">
             {!isMember ? (
-              <div className="overflow-hidden rounded-[28px] border border-sky-500/20 bg-[linear-gradient(135deg,#0f172a,#0b1b34_58%,#082f49)] shadow-[0_28px_70px_rgba(2,6,23,0.45)]">
-                <div className="flex flex-col gap-4 border-b border-white/10 p-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="overflow-hidden rounded-[28px] border border-sky-500/20 bg-[linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted))/0.7,hsl(var(--background)))] shadow-sm dark:bg-[linear-gradient(135deg,#0f172a,#0b1b34_58%,#082f49)] dark:shadow-[0_28px_70px_rgba(2,6,23,0.45)]">
+                <div className="flex flex-col gap-4 border-b border-border p-5 lg:flex-row lg:items-center lg:justify-between dark:border-white/10">
                   <div>
-                    <h3 className="text-lg font-semibold text-white">Member Progress Overview</h3>
-                    <p className="text-sm text-slate-300">Leaders can monitor current work and completed history from one place.</p>
+                    <h3 className="text-lg font-semibold text-foreground dark:text-white">Member Progress Overview</h3>
+                    <p className="text-sm text-muted-foreground dark:text-slate-300">Leaders can monitor current work and completed history from one place.</p>
                   </div>
                   <div className="w-full max-w-xs">
                     <Select value={taskHistoryMemberFilter} onValueChange={setTaskHistoryMemberFilter}>
-                      <SelectTrigger className="border-white/10 bg-slate-950/70 text-white">
+                      <SelectTrigger className="border-border bg-background text-foreground dark:border-white/10 dark:bg-slate-950/70 dark:text-white">
                         <SelectValue placeholder="Filter by member" />
                       </SelectTrigger>
                       <SelectContent>
@@ -3270,30 +3270,30 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                   {teamTaskProgress
                     .filter((entry) => taskHistoryMemberFilter === "all" || String(entry.member.id) === String(taskHistoryMemberFilter))
                     .map((entry) => (
-                      <Card key={entry.member.id} className="border-white/10 bg-slate-950/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+                      <Card key={entry.member.id} className="border-border bg-card/80 shadow-sm dark:border-white/10 dark:bg-slate-950/75 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
                         <CardContent className="space-y-4 p-5">
                           <div className="flex items-center justify-between gap-3">
                             {renderMemberIdentity(entry.member, entry.member.name)}
-                            <Badge className="border-sky-400/25 bg-sky-400/12 text-sky-100">
+                            <Badge className="border-sky-400/25 bg-sky-500/10 text-sky-700 dark:text-sky-100">
                               {entry.progress}% complete
                             </Badge>
                           </div>
                           <div className="grid grid-cols-3 gap-3 text-center">
-                            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-                              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Live</p>
-                              <p className="mt-2 text-2xl font-semibold text-white">{entry.live}</p>
+                            <div className="rounded-2xl border border-border bg-background/70 p-3 dark:border-white/8 dark:bg-white/[0.03]">
+                              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground dark:text-slate-400">Live</p>
+                              <p className="mt-2 text-2xl font-semibold text-foreground dark:text-white">{entry.live}</p>
                             </div>
-                            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-                              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Done</p>
-                              <p className="mt-2 text-2xl font-semibold text-white">{entry.completed}</p>
+                            <div className="rounded-2xl border border-border bg-background/70 p-3 dark:border-white/8 dark:bg-white/[0.03]">
+                              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground dark:text-slate-400">Done</p>
+                              <p className="mt-2 text-2xl font-semibold text-foreground dark:text-white">{entry.completed}</p>
                             </div>
-                            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-                              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Overdue</p>
-                              <p className="mt-2 text-2xl font-semibold text-white">{entry.overdue}</p>
+                            <div className="rounded-2xl border border-border bg-background/70 p-3 dark:border-white/8 dark:bg-white/[0.03]">
+                              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground dark:text-slate-400">Overdue</p>
+                              <p className="mt-2 text-2xl font-semibold text-foreground dark:text-white">{entry.overdue}</p>
                             </div>
                           </div>
                           <div>
-                            <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-[0.18em] text-slate-400">
+                            <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-[0.18em] text-muted-foreground dark:text-slate-400">
                               <span>Total workload</span>
                               <span>{entry.total} tasks</span>
                             </div>
@@ -3326,10 +3326,10 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="text-base font-semibold text-white">{task.title}</h4>
+                              <h4 className="text-base font-semibold text-foreground dark:text-white">{task.title}</h4>
                               <Badge className={cn("border text-[11px]", taskStatusClasses.badge)}>Completed</Badge>
                             </div>
-                            <p className="mt-2 text-sm leading-6 text-slate-300">{task.description}</p>
+                            <p className="mt-2 text-sm leading-6 text-muted-foreground dark:text-slate-300">{task.description}</p>
                           </div>
                           <Badge className={cn("border text-xs", getTaskPriorityClasses(task.priority))}>
                             {task.priority}
@@ -3337,14 +3337,14 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2">
-                          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Assignee</p>
+                          <div className="rounded-2xl border border-border bg-background/70 p-3 dark:border-white/8 dark:bg-white/[0.03]">
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground dark:text-slate-400">Assignee</p>
                             <div className="mt-3">
                               {renderMemberIdentity(getMemberById(task.assignedTo), task.assignee, { compact: true })}
                             </div>
                           </div>
-                          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Created By</p>
+                          <div className="rounded-2xl border border-border bg-background/70 p-3 dark:border-white/8 dark:bg-white/[0.03]">
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground dark:text-slate-400">Created By</p>
                             <div className="mt-3">
                               {renderMemberIdentity(getMemberById(task.createdByUserId), task.createdBy, { compact: true })}
                             </div>
@@ -3352,26 +3352,26 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                         </div>
                         {task.proofLink ? (
                           <div className="rounded-2xl border border-violet-400/20 bg-violet-400/10 p-3">
-                            <p className="text-[11px] uppercase tracking-[0.2em] text-violet-100/70">Accepted Proof</p>
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-violet-700 dark:text-violet-100/70">Accepted Proof</p>
                             <div className="mt-2 text-sm">
                               {renderExternalLink(task.proofLink)}
                             </div>
-                            {task.proofNote ? <p className="mt-2 text-sm text-slate-300">{task.proofNote}</p> : null}
+                            {task.proofNote ? <p className="mt-2 text-sm text-muted-foreground dark:text-slate-300">{task.proofNote}</p> : null}
                           </div>
                         ) : null}
 
-                        <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-3">
-                          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Project</p>
-                            <p className="mt-2 font-medium text-white">{task.project}</p>
+                        <div className="grid gap-3 text-sm text-muted-foreground dark:text-slate-300 sm:grid-cols-3">
+                          <div className="rounded-2xl border border-border bg-background/70 p-3 dark:border-white/8 dark:bg-white/[0.03]">
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground dark:text-slate-400">Project</p>
+                            <p className="mt-2 font-medium text-foreground dark:text-white">{task.project}</p>
                           </div>
-                          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Completed On</p>
-                            <p className="mt-2 font-medium text-white">{formatDate(task.completedAt || task.updatedAt)}</p>
+                          <div className="rounded-2xl border border-border bg-background/70 p-3 dark:border-white/8 dark:bg-white/[0.03]">
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground dark:text-slate-400">Completed On</p>
+                            <p className="mt-2 font-medium text-foreground dark:text-white">{formatDate(task.completedAt || task.updatedAt)}</p>
                           </div>
-                          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Due Date</p>
-                            <p className="mt-2 font-medium text-white">{formatDate(task.dueDate)}</p>
+                          <div className="rounded-2xl border border-border bg-background/70 p-3 dark:border-white/8 dark:bg-white/[0.03]">
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground dark:text-slate-400">Due Date</p>
+                            <p className="mt-2 font-medium text-foreground dark:text-white">{formatDate(task.dueDate)}</p>
                           </div>
                         </div>
                         {permissions.canDeleteRecords ? (
@@ -3392,11 +3392,11 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
               </div>
 
               {filteredTaskHistory.length === 0 ? (
-                <Card className="rounded-[24px] border border-dashed border-white/10 bg-slate-950/70 shadow-sm">
+                <Card className="rounded-[24px] border border-dashed border-border bg-card/70 shadow-sm dark:border-white/10 dark:bg-slate-950/70">
                   <CardContent className="py-12 text-center">
-                    <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-slate-500" />
-                    <h3 className="mb-2 text-lg font-semibold text-white">No Archived Tasks Yet</h3>
-                    <p className="text-slate-400">Completed tasks will move here automatically.</p>
+                    <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-muted-foreground dark:text-slate-500" />
+                    <h3 className="mb-2 text-lg font-semibold text-foreground dark:text-white">No Archived Tasks Yet</h3>
+                    <p className="text-muted-foreground dark:text-slate-400">Completed tasks will move here automatically.</p>
                   </CardContent>
                 </Card>
               ) : null}
@@ -3433,33 +3433,33 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           ) : null}
         </div>
 
-        <div className="overflow-hidden rounded-[28px] border border-sky-500/20 bg-[linear-gradient(135deg,#0f172a,#0b1b34_58%,#082f49)] shadow-[0_28px_70px_rgba(2,6,23,0.45)]">
+        <div className="overflow-hidden rounded-[28px] border border-sky-500/20 bg-[linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted))/0.7,hsl(var(--background)))] shadow-sm dark:bg-[linear-gradient(135deg,#0f172a,#0b1b34_58%,#082f49)] dark:shadow-[0_28px_70px_rgba(2,6,23,0.45)]">
           <div className="grid gap-3 p-5 sm:grid-cols-3">
-            <div className="rounded-2xl border border-emerald-400/20 bg-slate-950/70 p-5">
+            <div className="rounded-2xl border border-emerald-400/20 bg-card/80 p-5 dark:bg-slate-950/70">
               <p className="text-[11px] uppercase tracking-[0.26em] text-emerald-200/70">Completed</p>
-              <p className="mt-3 text-3xl font-semibold text-white">{visibleSkills.filter((skill) => skill.status === "Completed").length}</p>
+              <p className="mt-3 text-3xl font-semibold text-foreground dark:text-white">{visibleSkills.filter((skill) => skill.status === "Completed").length}</p>
             </div>
-            <div className="rounded-2xl border border-sky-400/20 bg-slate-950/70 p-5">
+            <div className="rounded-2xl border border-sky-400/20 bg-card/80 p-5 dark:bg-slate-950/70">
               <p className="text-[11px] uppercase tracking-[0.26em] text-sky-200/70">In Progress</p>
-              <p className="mt-3 text-3xl font-semibold text-white">{visibleSkills.filter((skill) => skill.status === "In Progress").length}</p>
+              <p className="mt-3 text-3xl font-semibold text-foreground dark:text-white">{visibleSkills.filter((skill) => skill.status === "In Progress").length}</p>
             </div>
-            <div className="rounded-2xl border border-amber-300/20 bg-slate-950/70 p-5">
+            <div className="rounded-2xl border border-amber-300/20 bg-card/80 p-5 dark:bg-slate-950/70">
               <p className="text-[11px] uppercase tracking-[0.26em] text-amber-100/70">Pending</p>
-              <p className="mt-3 text-3xl font-semibold text-white">{visibleSkills.filter((skill) => skill.status === "Pending").length}</p>
+              <p className="mt-3 text-3xl font-semibold text-foreground dark:text-white">{visibleSkills.filter((skill) => skill.status === "Pending").length}</p>
             </div>
           </div>
         </div>
 
         <div className="space-y-4">
           {membersWithSkills.map((member) => (
-            <Card key={member.id} className="overflow-hidden border-sky-500/20 bg-[linear-gradient(145deg,#0f172a,#0b1b34_58%,#111827)] shadow-[0_22px_50px_rgba(2,6,23,0.42)]">
-              <CardHeader className="border-b border-white/8 pb-4">
+            <Card key={member.id} className="overflow-hidden border-sky-500/20 bg-[linear-gradient(145deg,hsl(var(--card)),hsl(var(--muted))/0.8,hsl(var(--background)))] shadow-sm dark:bg-[linear-gradient(145deg,#0f172a,#0b1b34_58%,#111827)] dark:shadow-[0_22px_50px_rgba(2,6,23,0.42)]">
+              <CardHeader className="border-b border-border pb-4 dark:border-white/8">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
                     <AvatarFallback className="bg-sky-400/15 text-sky-200">{member.avatar}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <CardTitle className="text-base font-semibold text-white">{member.name}</CardTitle>
+                    <CardTitle className="text-base font-semibold text-foreground dark:text-white">{member.name}</CardTitle>
                     <div className="mt-1 flex items-center gap-1.5 text-xs text-sky-300">
                       {(() => {
                         const MemberRoleIcon = roleIcons[member.role] || Circle
@@ -3467,17 +3467,17 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                       })()}
                       <span>{member.role}</span>
                     </div>
-                    <CardDescription className="text-slate-400">{member.team} • {member.role}</CardDescription>
+                    <CardDescription className="text-muted-foreground dark:text-slate-400">{member.team} • {member.role}</CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-5">
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {groupedByMember[member.id].map((skill) => (
-                    <div key={skill.id} className="rounded-[22px] border border-white/10 bg-slate-950/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+                    <div key={skill.id} className="rounded-[22px] border border-border bg-card/80 p-4 shadow-sm dark:border-white/10 dark:bg-slate-950/70 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
                       <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
-                          <h4 className="text-sm font-semibold text-white">{skill.skillName}</h4>
+                          <h4 className="text-sm font-semibold text-foreground dark:text-white">{skill.skillName}</h4>
                           <Badge className={cn("mt-1 border text-xs", levelColors[skill.level])}>{skill.level}</Badge>
                         </div>
                         {(permissions.canEditAssignedSkills || permissions.canDeleteAssignedSkills) ? (
@@ -3499,7 +3499,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                           </div>
                         ) : null}
                       </div>
-                      <p className="mb-3 text-sm leading-6 text-slate-300">{skill.description}</p>
+                      <p className="mb-3 text-sm leading-6 text-muted-foreground dark:text-slate-300">{skill.description}</p>
                       <div className="mb-3 flex items-center justify-between">
                         <Badge className={cn(
                           "border",
@@ -3515,7 +3515,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                           </Button>
                           ) : null}
                       </div>
-                      <div className="text-xs text-slate-400">
+                      <div className="text-xs text-muted-foreground dark:text-slate-400">
                         <span className="mr-1 uppercase tracking-[0.18em]">Assigned by</span>
                         <div className="mt-2">
                           {renderMemberIdentity(
@@ -3533,11 +3533,11 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           ))}
 
           {membersWithSkills.length === 0 ? (
-            <Card className="border border-white/10 bg-slate-950/70 shadow-sm">
+            <Card className="border border-border bg-card/70 shadow-sm dark:border-white/10 dark:bg-slate-950/70">
               <CardContent className="py-12 text-center">
-                <GraduationCap className="mx-auto mb-4 h-12 w-12 text-slate-500" />
-                <h3 className="mb-2 text-lg font-semibold text-white">No Skills Assigned Yet</h3>
-                <p className="text-slate-400">Skills will appear here when the backend returns assignments.</p>
+                <GraduationCap className="mx-auto mb-4 h-12 w-12 text-muted-foreground dark:text-slate-500" />
+                <h3 className="mb-2 text-lg font-semibold text-foreground dark:text-white">No Skills Assigned Yet</h3>
+                <p className="text-muted-foreground dark:text-slate-400">Skills will appear here when the backend returns assignments.</p>
               </CardContent>
             </Card>
           ) : null}
@@ -3713,15 +3713,15 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[0.95fr,1.05fr]">
-          <Card className="overflow-hidden border-white/10 bg-[linear-gradient(145deg,#111827,#0f172a_52%,#020617)] shadow-[0_26px_60px_rgba(2,6,23,0.46)]">
+          <Card className="overflow-hidden border-border bg-[linear-gradient(145deg,hsl(var(--card)),hsl(var(--muted))/0.75,hsl(var(--background)))] shadow-sm dark:border-white/10 dark:bg-[linear-gradient(145deg,#111827,#0f172a_52%,#020617)] dark:shadow-[0_26px_60px_rgba(2,6,23,0.46)]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xl font-semibold text-white">Performance Spotlight</CardTitle>
-              <CardDescription className="text-slate-300">Three quick gauges for competitive standing, consistency, and execution quality.</CardDescription>
+              <CardTitle className="text-xl font-semibold text-foreground dark:text-white">Performance Spotlight</CardTitle>
+              <CardDescription className="text-muted-foreground dark:text-slate-300">Three quick gauges for competitive standing, consistency, and execution quality.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 md:grid-cols-3">
                 {spotlightRingData.map((item) => (
-                  <div key={item.key} className="rounded-[24px] border border-white/10 bg-white/5 p-4 text-center">
+                  <div key={item.key} className="rounded-[24px] border border-border bg-background/70 p-4 text-center dark:border-white/10 dark:bg-white/5">
                     <ChartContainer
                       className="mx-auto max-w-[180px]"
                       config={{
@@ -3742,40 +3742,40 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                         <RadialBar dataKey="value" background clockWise cornerRadius={16} />
                       </RadialBarChart>
                     </ChartContainer>
-                    <p className="mt-2 text-[11px] uppercase tracking-[0.24em] text-slate-400">{item.label}</p>
-                    <p className="mt-2 text-3xl font-semibold text-white">{item.value}%</p>
+                    <p className="mt-2 text-[11px] uppercase tracking-[0.24em] text-muted-foreground dark:text-slate-400">{item.label}</p>
+                    <p className="mt-2 text-3xl font-semibold text-foreground dark:text-white">{item.value}%</p>
                   </div>
                 ))}
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+                <div className="rounded-2xl border border-border bg-background/70 p-4 dark:border-white/10 dark:bg-slate-950/70">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-white">Tasks Completed</span>
-                    <span className="text-slate-400">{completedTasks}/{userTasks.length || 0}</span>
+                    <span className="font-medium text-foreground dark:text-white">Tasks Completed</span>
+                    <span className="text-muted-foreground dark:text-slate-400">{completedTasks}/{userTasks.length || 0}</span>
                   </div>
                   <Progress value={taskProgress} className="mt-3 h-2" />
-                  <p className="mt-3 text-xs text-slate-400">{taskProgress}% completion rate for assigned tasks</p>
+                  <p className="mt-3 text-xs text-muted-foreground dark:text-slate-400">{taskProgress}% completion rate for assigned tasks</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+                <div className="rounded-2xl border border-border bg-background/70 p-4 dark:border-white/10 dark:bg-slate-950/70">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-white">Skills Completed</span>
-                    <span className="text-slate-400">{completedUserSkills}/{userSkills.length || 0}</span>
+                    <span className="font-medium text-foreground dark:text-white">Skills Completed</span>
+                    <span className="text-muted-foreground dark:text-slate-400">{completedUserSkills}/{userSkills.length || 0}</span>
                   </div>
                   <Progress value={skillProgress} className="mt-3 h-2" />
-                  <p className="mt-3 text-xs text-slate-400">{skillProgress}% completion rate for assigned skills</p>
+                  <p className="mt-3 text-xs text-muted-foreground dark:text-slate-400">{skillProgress}% completion rate for assigned skills</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden border-white/10 bg-[linear-gradient(160deg,#101826,#0f172a_55%,#020617)] shadow-[0_26px_60px_rgba(2,6,23,0.46)]">
+          <Card className="overflow-hidden border-border bg-[linear-gradient(160deg,hsl(var(--card)),hsl(var(--muted))/0.75,hsl(var(--background)))] shadow-sm dark:border-white/10 dark:bg-[linear-gradient(160deg,#101826,#0f172a_55%,#020617)] dark:shadow-[0_26px_60px_rgba(2,6,23,0.46)]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-xl font-semibold text-white">Performance Narrative</CardTitle>
-              <CardDescription className="text-slate-300">Readable decision cues with your current benchmark position.</CardDescription>
+              <CardTitle className="text-xl font-semibold text-foreground dark:text-white">Performance Narrative</CardTitle>
+              <CardDescription className="text-muted-foreground dark:text-slate-300">Readable decision cues with your current benchmark position.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {insightMessages.map((message) => (
-                <div key={message} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-slate-100">
+                <div key={message} className="rounded-2xl border border-border bg-background/70 p-4 text-sm leading-6 text-foreground dark:border-white/10 dark:bg-white/5 dark:text-slate-100">
                   {message}
                 </div>
               ))}
@@ -3812,20 +3812,20 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[0.85fr,1.15fr]">
-          <Card className="overflow-hidden border-sky-500/20 bg-[linear-gradient(160deg,#0f172a,#0b1b34_58%,#111827)] shadow-[0_22px_50px_rgba(2,6,23,0.42)]">
+          <Card className="overflow-hidden border-sky-500/20 bg-[linear-gradient(160deg,hsl(var(--card)),hsl(var(--muted))/0.8,hsl(var(--background)))] shadow-sm dark:bg-[linear-gradient(160deg,#0f172a,#0b1b34_58%,#111827)] dark:shadow-[0_22px_50px_rgba(2,6,23,0.42)]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold text-white">Skills Status</CardTitle>
-              <CardDescription className="text-slate-400">Track weekly skill assignments and completion state</CardDescription>
+              <CardTitle className="text-lg font-semibold text-foreground dark:text-white">Skills Status</CardTitle>
+              <CardDescription className="text-muted-foreground dark:text-slate-400">Track weekly skill assignments and completion state</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {userSkills.length === 0 ? (
-                <p className="text-sm text-slate-400">No skills assigned yet.</p>
+                <p className="text-sm text-muted-foreground dark:text-slate-400">No skills assigned yet.</p>
               ) : (
                 userSkills.map((skill) => (
-                  <div key={skill.id} className="flex items-start justify-between gap-4 rounded-[22px] border border-white/10 bg-slate-950/70 p-4">
+                  <div key={skill.id} className="flex items-start justify-between gap-4 rounded-[22px] border border-border bg-card/80 p-4 dark:border-white/10 dark:bg-slate-950/70">
                     <div className="min-w-0">
-                      <p className="font-medium text-white">{skill.skillName}</p>
-                      <p className="text-sm text-slate-400">{skill.description}</p>
+                      <p className="font-medium text-foreground dark:text-white">{skill.skillName}</p>
+                      <p className="text-sm text-muted-foreground dark:text-slate-400">{skill.description}</p>
                     </div>
                     <Badge className={cn(
                       "border",
@@ -3841,14 +3841,14 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden border-white/10 bg-[linear-gradient(135deg,#0b1220,#111827_58%,#0f172a)] shadow-[0_30px_70px_rgba(2,6,23,0.55)]">
+          <Card className="overflow-hidden border-border bg-[linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted))/0.75,hsl(var(--background)))] shadow-sm dark:border-white/10 dark:bg-[linear-gradient(135deg,#0b1220,#111827_58%,#0f172a)] dark:shadow-[0_30px_70px_rgba(2,6,23,0.55)]">
             <CardHeader className="pb-4">
-              <CardTitle className="text-xl font-semibold text-white">Performance Arena</CardTitle>
-              <CardDescription className="text-slate-300">Premium ranking canvas for the {cohortLabel} group with podium leaders, benchmark line, and live point labels.</CardDescription>
+              <CardTitle className="text-xl font-semibold text-foreground dark:text-white">Performance Arena</CardTitle>
+              <CardDescription className="text-muted-foreground dark:text-slate-300">Premium ranking canvas for the {cohortLabel} group with podium leaders, benchmark line, and live point labels.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {performanceShowcaseData.length === 0 ? (
-                <p className="text-sm text-slate-300">Performance data will appear once members start earning activity points.</p>
+                <p className="text-sm text-muted-foreground dark:text-slate-300">Performance data will appear once members start earning activity points.</p>
               ) : (
                 <>
                   <div className="grid gap-3 md:grid-cols-3">
