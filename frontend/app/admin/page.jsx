@@ -42,7 +42,7 @@ import {
   X,
   Zap,
 } from "lucide-react"
-import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, XAxis, YAxis } from "recharts"
 import { toast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -228,27 +228,27 @@ function getDayDifferenceFromToday(value) {
 function getTaskStatusClasses(status) {
   if (status === "Done") {
     return {
-      column: "bg-emerald-50 text-emerald-800",
-      card: "border-emerald-200/70 bg-emerald-50/30",
-      badge: "border-emerald-200 bg-emerald-100 text-emerald-800",
-      icon: "text-emerald-600",
+      column: "border border-emerald-500/25 bg-emerald-500/10 text-emerald-100 shadow-[0_0_0_1px_rgba(16,185,129,0.05),0_18px_40px_rgba(5,150,105,0.18)]",
+      card: "border-emerald-500/30 bg-gradient-to-br from-emerald-500/18 via-emerald-500/8 to-slate-950 shadow-[0_24px_60px_rgba(5,150,105,0.18)]",
+      badge: "border-emerald-400/30 bg-emerald-400/15 text-emerald-100",
+      icon: "text-emerald-300",
     }
   }
 
   if (status === "In Progress") {
     return {
-      column: "bg-sky-50 text-sky-800",
-      card: "border-sky-200/70 bg-sky-50/30",
-      badge: "border-sky-200 bg-sky-100 text-sky-800",
-      icon: "text-sky-600",
+      column: "border border-sky-500/25 bg-sky-500/10 text-sky-100 shadow-[0_0_0_1px_rgba(14,165,233,0.05),0_18px_40px_rgba(14,165,233,0.16)]",
+      card: "border-sky-500/30 bg-gradient-to-br from-sky-500/18 via-sky-500/8 to-slate-950 shadow-[0_24px_60px_rgba(14,165,233,0.18)]",
+      badge: "border-sky-400/30 bg-sky-400/15 text-sky-100",
+      icon: "text-sky-300",
     }
   }
 
   return {
-    column: "bg-amber-50 text-amber-800",
-    card: "border-amber-200/70 bg-amber-50/30",
-    badge: "border-amber-200 bg-amber-100 text-amber-800",
-    icon: "text-amber-600",
+    column: "border border-amber-500/25 bg-amber-500/10 text-amber-100 shadow-[0_0_0_1px_rgba(245,158,11,0.05),0_18px_40px_rgba(245,158,11,0.16)]",
+    card: "border-amber-500/30 bg-gradient-to-br from-amber-500/18 via-amber-500/8 to-slate-950 shadow-[0_24px_60px_rgba(245,158,11,0.18)]",
+    badge: "border-amber-400/30 bg-amber-400/15 text-amber-100",
+    icon: "text-amber-300",
   }
 }
 
@@ -305,12 +305,12 @@ function getTaskUrgency(task) {
 }
 
 function getUrgencyBadgeClasses(tone) {
-  if (tone === "overdue") return "border-rose-200 bg-rose-100 text-rose-800"
-  if (tone === "today") return "border-orange-200 bg-orange-100 text-orange-800"
-  if (tone === "soon") return "border-amber-200 bg-amber-100 text-amber-800"
-  if (tone === "done") return "border-emerald-200 bg-emerald-100 text-emerald-800"
-  if (tone === "upcoming") return "border-slate-200 bg-slate-100 text-slate-800"
-  return "border-border bg-muted text-muted-foreground"
+  if (tone === "overdue") return "border-rose-400/30 bg-rose-400/15 text-rose-100"
+  if (tone === "today") return "border-orange-400/30 bg-orange-400/15 text-orange-100"
+  if (tone === "soon") return "border-amber-400/30 bg-amber-400/15 text-amber-100"
+  if (tone === "done") return "border-emerald-400/30 bg-emerald-400/15 text-emerald-100"
+  if (tone === "upcoming") return "border-slate-400/30 bg-slate-400/15 text-slate-100"
+  return "border-border/60 bg-white/5 text-slate-300"
 }
 
 function formatRelativeTime(value) {
@@ -1391,8 +1391,39 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       shortName: member.name.length > 14 ? `${member.name.slice(0, 14)}...` : member.name,
       points: Number(member.activity_points || 0),
       fill: String(member.id) === String(currentUser?.id || "") ? "var(--color-you)" : "var(--color-team)",
-    }))
+      }))
   }, [currentUser?.id, visibleLeaderboard])
+  const performanceShowcaseData = useMemo(() => {
+    const ranked = [...performanceChartData].sort((left, right) => right.points - left.points)
+    const topEntries = ranked.slice(0, 8)
+
+    if (!topEntries.some((entry) => String(entry.id) === String(currentUser?.id || ""))) {
+      const currentEntry = ranked.find((entry) => String(entry.id) === String(currentUser?.id || ""))
+      if (currentEntry) {
+        topEntries.push(currentEntry)
+      }
+    }
+
+    return topEntries.map((entry, index) => ({
+      ...entry,
+      chartLabel: entry.name.length > 12 ? `${entry.name.slice(0, 12)}...` : entry.name,
+      rank: ranked.findIndex((rankedEntry) => String(rankedEntry.id) === String(entry.id)) + 1 || index + 1,
+      fill:
+        String(entry.id) === String(currentUser?.id || "")
+          ? "var(--color-you)"
+          : index === 0
+            ? "var(--color-first)"
+            : index === 1
+              ? "var(--color-second)"
+              : index === 2
+                ? "var(--color-third)"
+                : "var(--color-team)",
+    }))
+  }, [currentUser?.id, performanceChartData])
+  const performancePodium = useMemo(
+    () => [...performanceShowcaseData].slice(0, 3),
+    [performanceShowcaseData]
+  )
 
   useEffect(() => {
     if (taskReminderDialogSeen) {
@@ -2788,35 +2819,38 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Card className="border border-rose-200/70 bg-rose-50/60 shadow-sm">
-            <CardContent className="p-5">
-              <p className="text-sm text-rose-700">Overdue</p>
-              <p className="mt-2 text-3xl font-bold text-rose-900">{overdueTasks.length}</p>
-              <p className="mt-1 text-xs text-rose-700/80">Tasks already past their deadline</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-orange-200/70 bg-orange-50/60 shadow-sm">
-            <CardContent className="p-5">
-              <p className="text-sm text-orange-700">Due Today</p>
-              <p className="mt-2 text-3xl font-bold text-orange-900">{dueTodayTasks.length}</p>
-              <p className="mt-1 text-xs text-orange-700/80">Need attention before the day ends</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-amber-200/70 bg-amber-50/60 shadow-sm">
-            <CardContent className="p-5">
-              <p className="text-sm text-amber-700">Due Soon</p>
-              <p className="mt-2 text-3xl font-bold text-amber-900">{dueSoonTasks.length}</p>
-              <p className="mt-1 text-xs text-amber-700/80">Upcoming within the next 2 days</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-emerald-200/70 bg-emerald-50/60 shadow-sm">
-            <CardContent className="p-5">
-              <p className="text-sm text-emerald-700">Done Archive</p>
-              <p className="mt-2 text-3xl font-bold text-emerald-900">{groupedTasks.Done.length}</p>
-              <p className="mt-1 text-xs text-emerald-700/80">Completed tasks remain reviewable here</p>
-            </CardContent>
-          </Card>
+        <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(34,197,94,0.18),transparent_32%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_30%),linear-gradient(135deg,rgba(15,23,42,0.96),rgba(2,6,23,0.92))] shadow-[0_32px_80px_rgba(2,6,23,0.55)]">
+          <div className="flex flex-col gap-6 p-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-xs uppercase tracking-[0.32em] text-emerald-300/80">Task Control Center</p>
+              <h3 className="mt-3 text-3xl font-semibold tracking-tight text-white">Clean status flow with instant urgency visibility</h3>
+              <p className="mt-3 text-sm leading-6 text-slate-300">
+                Pending, active, and completed work now sits inside a stronger dark dashboard with deadline pressure highlighted immediately.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 backdrop-blur">
+                <p className="text-[11px] uppercase tracking-[0.26em] text-rose-200/75">Overdue</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{overdueTasks.length}</p>
+                <p className="mt-1 text-xs text-rose-100/75">Need immediate attention</p>
+              </div>
+              <div className="rounded-2xl border border-orange-400/20 bg-orange-400/10 px-4 py-3 backdrop-blur">
+                <p className="text-[11px] uppercase tracking-[0.26em] text-orange-200/75">Due Today</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{dueTodayTasks.length}</p>
+                <p className="mt-1 text-xs text-orange-100/75">Should close before day end</p>
+              </div>
+              <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 backdrop-blur">
+                <p className="text-[11px] uppercase tracking-[0.26em] text-amber-100/75">Due Soon</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{dueSoonTasks.length}</p>
+                <p className="mt-1 text-xs text-amber-100/75">Next two days pipeline</p>
+              </div>
+              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 backdrop-blur">
+                <p className="text-[11px] uppercase tracking-[0.26em] text-emerald-100/75">Done Archive</p>
+                <p className="mt-2 text-3xl font-semibold text-white">{groupedTasks.Done.length}</p>
+                <p className="mt-1 text-xs text-emerald-100/75">Completed work stays reviewable</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className={cn("grid gap-6", statusesToShow.length === 1 ? "md:grid-cols-1" : "md:grid-cols-3")}>
@@ -2824,32 +2858,32 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
             const statusClasses = getTaskStatusClasses(status)
 
             return (
-            <div key={status} className="space-y-3">
+            <div key={status} className="space-y-4">
               <div className={cn("flex items-center gap-2 rounded-lg p-3", statusClasses.column)}>
                 {status === "Pending" ? <Circle className={cn("h-4 w-4", statusClasses.icon)} /> : null}
                 {status === "In Progress" ? <AlertCircle className={cn("h-4 w-4", statusClasses.icon)} /> : null}
                 {status === "Done" ? <CheckCircle2 className={cn("h-4 w-4", statusClasses.icon)} /> : null}
-                <span className="font-medium text-foreground">{status}</span>
+                <span className="font-medium text-white">{status}</span>
                 <Badge className={cn("ml-auto border", statusClasses.badge)}>
                   {groupedTasks[status].length}
                 </Badge>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {groupedTasks[status].map((task) => {
                   const taskStatusClasses = getTaskStatusClasses(task.status)
                   const urgency = getTaskUrgency(task)
 
                   return (
-                  <Card key={task.id} className={cn("border shadow-sm", taskStatusClasses.card)}>
-                    <CardContent className="p-4">
-                      <div className="mb-2 flex items-start justify-between gap-3">
+                  <Card key={task.id} className={cn("overflow-hidden rounded-[24px] border shadow-sm transition-transform duration-200 hover:-translate-y-1", taskStatusClasses.card)}>
+                    <CardContent className="p-5">
+                      <div className="mb-3 flex items-start justify-between gap-3">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="text-sm font-medium text-foreground">{task.title}</h4>
+                            <h4 className="text-base font-semibold leading-6 text-white">{task.title}</h4>
                             <Badge className={cn("border text-[11px]", taskStatusClasses.badge)}>{task.status}</Badge>
                           </div>
-                          <p className="mt-1 text-xs text-muted-foreground">{urgency.detail}</p>
+                          <p className="mt-2 text-xs text-slate-300">{urgency.detail}</p>
                         </div>
                         <div className="flex flex-wrap justify-end gap-2">
                           <Badge
@@ -2863,8 +2897,8 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                           </Badge>
                         </div>
                       </div>
-                      <p className="mb-3 text-xs text-muted-foreground">{task.description}</p>
-                      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <p className="mb-4 text-sm leading-7 text-slate-300">{task.description}</p>
+                      <div className="mb-5 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-400">
                         <span>{task.assignee}</span>
                         <span>•</span>
                         <span>{task.project}</span>
@@ -2914,8 +2948,8 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 })}
 
                 {groupedTasks[status].length === 0 ? (
-                  <Card className="border border-dashed border-border shadow-sm">
-                    <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                  <Card className="rounded-[24px] border border-dashed border-white/10 bg-slate-950/70 shadow-sm">
+                    <CardContent className="py-12 text-center text-sm text-slate-400">
                       No tasks in this status.
                     </CardContent>
                   </Card>
@@ -3270,7 +3304,7 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           </Card>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
+        <div className="grid gap-6 lg:grid-cols-[0.85fr,1.15fr]">
           <Card className="border border-border shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-semibold text-foreground">Skills Status</CardTitle>
@@ -3295,50 +3329,99 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
             </CardContent>
           </Card>
 
-          <Card className="border border-border shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold text-foreground">Team Performance Chart</CardTitle>
-              <CardDescription>Fair comparison of activity points across the {cohortLabel} group</CardDescription>
+          <Card className="overflow-hidden border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_28%),radial-gradient(circle_at_top_right,rgba(245,158,11,0.16),transparent_24%),linear-gradient(140deg,rgba(15,23,42,0.98),rgba(2,6,23,0.94))] shadow-[0_30px_70px_rgba(2,6,23,0.55)]">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl font-semibold text-white">Performance Arena</CardTitle>
+              <CardDescription className="text-slate-300">High-contrast ranking view for the {cohortLabel} group with spotlight on top contributors and your position.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {performanceChartData.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Performance data will appear once members start earning activity points.</p>
+            <CardContent className="space-y-6">
+              {performanceShowcaseData.length === 0 ? (
+                <p className="text-sm text-slate-300">Performance data will appear once members start earning activity points.</p>
               ) : (
                 <>
-                  <ChartContainer
-                    className="w-full"
-                    config={{
-                      you: { label: "You", color: "#0f766e" },
-                      team: { label: "Team", color: "#94a3b8" },
-                    }}
-                    style={{ height: Math.max(280, performanceChartData.length * 44) }}
-                  >
-                    <BarChart data={performanceChartData} layout="vertical" margin={{ left: 12, right: 12 }}>
-                      <CartesianGrid horizontal={false} />
-                      <XAxis type="number" hide />
-                      <YAxis
-                        type="category"
-                        dataKey="shortName"
-                        width={110}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel formatter={(value, _name, item) => (
-                        <div className="flex min-w-[10rem] items-center justify-between gap-4">
-                          <span>{item?.payload?.name || "Member"}</span>
-                          <span className="font-mono">{value} pts</span>
-                        </div>
-                      )} />} />
-                      <Bar dataKey="points" radius={6}>
-                        {performanceChartData.map((entry) => (
-                          <Cell key={entry.id} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ChartContainer>
-                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <Badge className="border border-emerald-200 bg-emerald-100 text-emerald-800">You</Badge>
-                    <span>Your bar is highlighted for quick comparison.</span>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {performancePodium.map((member, index) => (
+                      <div
+                        key={member.id}
+                        className={cn(
+                          "rounded-2xl border px-4 py-4",
+                          index === 0 && "border-yellow-400/25 bg-yellow-400/10",
+                          index === 1 && "border-slate-300/20 bg-slate-300/10",
+                          index === 2 && "border-orange-300/20 bg-orange-300/10"
+                        )}
+                      >
+                        <p className="text-[11px] uppercase tracking-[0.3em] text-slate-300">Rank {member.rank}</p>
+                        <p className="mt-3 truncate text-lg font-semibold text-white">{member.name}</p>
+                        <p className="mt-1 text-sm text-slate-300">{member.points} activity points</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-[24px] border border-white/10 bg-slate-950/60 p-4">
+                    <ChartContainer
+                      className="w-full"
+                      config={{
+                        you: { label: "You", color: "#22c55e" },
+                        first: { label: "1st", color: "#facc15" },
+                        second: { label: "2nd", color: "#cbd5e1" },
+                        third: { label: "3rd", color: "#fdba74" },
+                        team: { label: "Team", color: "#38bdf8" },
+                      }}
+                      style={{ height: Math.max(360, performanceShowcaseData.length * 52) }}
+                    >
+                      <BarChart data={performanceShowcaseData} layout="vertical" margin={{ left: 10, right: 24, top: 10, bottom: 10 }} barCategoryGap={14}>
+                        <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="rgba(148,163,184,0.16)" />
+                        <XAxis type="number" tickLine={false} axisLine={false} tick={{ fill: "#94a3b8", fontSize: 12 }} />
+                        <YAxis
+                          type="category"
+                          dataKey="chartLabel"
+                          width={120}
+                          tickLine={false}
+                          axisLine={false}
+                          tick={{ fill: "#e2e8f0", fontSize: 12 }}
+                        />
+                        <ReferenceLine x={cohortAverageActivity} stroke="rgba(255,255,255,0.45)" strokeDasharray="5 5" />
+                        <ChartTooltip
+                          cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                          content={(
+                            <ChartTooltipContent
+                              hideLabel
+                              formatter={(value, _name, item) => (
+                                <div className="flex min-w-[12rem] items-center justify-between gap-4">
+                                  <div>
+                                    <p className="font-medium text-white">{item?.payload?.name || "Member"}</p>
+                                    <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Rank {item?.payload?.rank || "-"}</p>
+                                  </div>
+                                  <span className="font-mono text-white">{value} pts</span>
+                                </div>
+                              )}
+                            />
+                          )}
+                        />
+                        <Bar dataKey="points" radius={10} barSize={24}>
+                          <LabelList dataKey="points" position="right" fill="#f8fafc" fontSize={12} />
+                          {performanceShowcaseData.map((entry) => (
+                            <Cell key={entry.id} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ChartContainer>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <p className="text-[11px] uppercase tracking-[0.26em] text-slate-400">Average Marker</p>
+                      <p className="mt-2 text-2xl font-semibold text-white">{cohortAverageActivity}</p>
+                      <p className="mt-1 text-xs text-slate-400">Shown as dashed line inside the chart.</p>
+                    </div>
+                    <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
+                      <p className="text-[11px] uppercase tracking-[0.26em] text-emerald-100/80">Your Position</p>
+                      <p className="mt-2 text-2xl font-semibold text-white">#{currentRank > 0 ? currentRank : "-"}</p>
+                      <p className="mt-1 text-xs text-emerald-100/75">Highlighted in green across the arena.</p>
+                    </div>
+                    <div className="rounded-2xl border border-sky-400/20 bg-sky-400/10 p-4">
+                      <p className="text-[11px] uppercase tracking-[0.26em] text-sky-100/80">Next Target</p>
+                      <p className="mt-2 text-2xl font-semibold text-white">{pointsToNextRank}</p>
+                      <p className="mt-1 text-xs text-sky-100/75">Points needed to climb one more rank.</p>
+                    </div>
                   </div>
                 </>
               )}
