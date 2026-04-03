@@ -2912,24 +2912,26 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                 Task History
               </Button>
             </div>
-            <div className="inline-flex flex-wrap items-center gap-2 rounded-2xl border border-border/70 bg-card/70 p-2 shadow-sm backdrop-blur">
-              {taskStatusOptions.map((status) => (
-                <Button
-                  key={status}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setTaskStatusFilter(status)}
-                  className={cn(
-                    "rounded-xl px-4 text-sm font-medium transition-colors",
-                    taskStatusFilter === status
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  {status}
-                </Button>
-              ))}
-            </div>
+            {taskBoardMode === "live" ? (
+              <div className="inline-flex flex-wrap items-center gap-2 rounded-2xl border border-border/70 bg-card/70 p-2 shadow-sm backdrop-blur">
+                {taskStatusOptions.map((status) => (
+                  <Button
+                    key={status}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTaskStatusFilter(status)}
+                    className={cn(
+                      "rounded-xl px-4 text-sm font-medium transition-colors",
+                      taskStatusFilter === status
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    {status}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
             {permissions.canAssignTasks ? (
               <Button
                 onClick={() => setTaskModalOpen(true)}
@@ -3194,6 +3196,17 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                             <p className="mt-2 font-medium text-white">{formatDate(task.dueDate)}</p>
                           </div>
                         </div>
+                        {permissions.canDeleteRecords ? (
+                          <div className="flex justify-end">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteItem(`/api/tasks/${task.id}`, "Task deleted successfully.", `Delete task ${task.title}?`)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        ) : null}
                       </CardContent>
                     </Card>
                   )
