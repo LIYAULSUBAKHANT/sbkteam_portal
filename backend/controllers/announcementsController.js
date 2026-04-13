@@ -3,6 +3,7 @@ const { logActivity } = require("./activityLogController");
 const { logInsertedTime, serializeRows } = require("../utils/datetime");
 const { emitDataChanged } = require("../socket");
 const { ensureDiscussionThread } = require("../services/discussionsService");
+const { createNotificationsForUsers } = require("../services/notificationService");
 const REACTION_TYPES = new Set(["like", "acknowledge"]);
 
 function buildAnnouncementVisibilityClause(user) {
@@ -168,15 +169,12 @@ async function createNotificationsForAnnouncement(title, targetType, targetTeamI
 
   const message = buildAnnouncementNotificationMessage(title);
 
-  await Promise.all(
-    recipients.map((userId) =>
-      db.execute(
-        `INSERT INTO notifications (user_id, type, message, created_at)
-         VALUES (?, 'announcement', ?, NOW())`,
-        [userId, message]
-      )
-    )
-  );
+  await createNotificationsForUsers({
+    userIds: recipients,
+    type: "announcement",
+    message,
+    url: "/admin/dashboard",
+  });
 }
 
 async function createAnnouncement(req, res) {
@@ -490,3 +488,4 @@ async function deleteAnnouncement(req, res) {
 }
 
 module.exports = { createAnnouncement, updateAnnouncement, getAnnouncements, deleteAnnouncement, toggleAnnouncementReaction };
+

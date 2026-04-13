@@ -16,6 +16,7 @@ const skillsRoutes = require("./routes/skillsRoutes");
 const announcementsRoutes = require("./routes/announcementsRoutes");
 const remindersRoutes = require("./routes/remindersRoutes");
 const notificationsRoutes = require("./routes/notificationsRoutes");
+const pushSubscriptionsRoutes = require("./routes/pushSubscriptionsRoutes");
 const activityLogsRoutes = require("./routes/activityLogsRoutes");
 const discussionsRoutes = require("./routes/discussionsRoutes");
 const { authenticateToken } = require("./middleware/authMiddleware");
@@ -51,6 +52,7 @@ app.use("/api/weekly-skills", authenticateToken, skillsRoutes);
 app.use("/api/announcements", authenticateToken, announcementsRoutes);
 app.use("/api/reminders", authenticateToken, remindersRoutes);
 app.use("/api/notifications", authenticateToken, notificationsRoutes);
+app.use("/api/push-subscriptions", authenticateToken, pushSubscriptionsRoutes);
 app.use("/api/discussions", authenticateToken, discussionsRoutes);
 app.use("/api/activity-logs", authenticateToken, activityLogsRoutes);
 
@@ -94,3 +96,4 @@ server.on("error", (error) => {
 
   process.exit(1);
 });
+

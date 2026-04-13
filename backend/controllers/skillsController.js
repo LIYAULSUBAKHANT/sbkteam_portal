@@ -1,6 +1,7 @@
 const db = require("../db");
 const { logActivity } = require("./activityLogController");
 const { emitDataChanged } = require("../socket");
+const { createNotificationsForUsers } = require("../services/notificationService");
 
 function canEditSkillAssignment(roleKey) {
   return roleKey === "captain" || roleKey === "strategist";
@@ -72,6 +73,13 @@ async function assignSkill(req, res) {
           targetLabel: skill_name
         });
       }
+
+      await createNotificationsForUsers({
+        userIds: normalizedUserIds,
+        type: "skill",
+        message: `New skill assigned: ${skill_name}`,
+        url: "/admin/dashboard",
+      });
 
       for (const targetUserId of normalizedUserIds) {
         emitDataChanged({ type: "skill", action: "create", data: { userId: targetUserId } });
@@ -272,3 +280,4 @@ async function getSkillsByUser(req, res) {
 }
 
 module.exports = { assignSkill, updateSkill, updateSkillStatus, deleteSkill, getSkillsByUser };
+

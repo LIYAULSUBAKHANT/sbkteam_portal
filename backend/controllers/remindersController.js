@@ -2,6 +2,7 @@ const db = require("../db");
 const { logActivity } = require("./activityLogController");
 const { logInsertedTime, serializeRows } = require("../utils/datetime");
 const { emitDataChanged } = require("../socket");
+const { createNotificationsForUsers } = require("../services/notificationService");
 
 async function getNotificationRecipients(targetType, targetTeamId, targetUserId) {
   if (targetType === "team" && targetTeamId) {
@@ -40,15 +41,12 @@ async function createNotificationsForReminder(title, targetType, targetTeamId, t
 
   const message = buildReminderNotificationMessage(title);
 
-  await Promise.all(
-    recipients.map((userId) =>
-      db.execute(
-        `INSERT INTO notifications (user_id, type, message, created_at)
-         VALUES (?, 'reminder', ?, NOW())`,
-        [userId, message]
-      )
-    )
-  );
+  await createNotificationsForUsers({
+    userIds: recipients,
+    type: "reminder",
+    message,
+    url: "/admin/dashboard",
+  });
 }
 
 async function createReminder(req, res) {
@@ -261,3 +259,4 @@ async function deleteReminder(req, res) {
 }
 
 module.exports = { createReminder, updateReminder, getReminders, deleteReminder };
+

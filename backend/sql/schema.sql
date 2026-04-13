@@ -210,6 +210,21 @@ CREATE TABLE IF NOT EXISTS notifications (
   CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id INT NOT NULL AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  endpoint TEXT NOT NULL,
+  p256dh VARCHAR(512) NOT NULL,
+  auth VARCHAR(512) NOT NULL,
+  user_agent VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_push_subscriptions_user_id (user_id),
+  CONSTRAINT fk_push_subscriptions_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS discussion_threads (
   id INT NOT NULL AUTO_INCREMENT,
   source_type VARCHAR(30) NOT NULL DEFAULT 'general',
@@ -268,3 +283,4 @@ INSERT INTO roles (id, role_key, display_name) VALUES
 ON DUPLICATE KEY UPDATE
   role_key = VALUES(role_key),
   display_name = VALUES(display_name);
+

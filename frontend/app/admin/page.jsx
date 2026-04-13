@@ -78,6 +78,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost, apiPut, clearStoredAuth, getStoredAuth } from "@/lib/api"
+import { getPushSubscriptionStatus, isPushSupported, subscribeToPushNotifications } from "@/lib/push-notifications"
 import { useAppStore } from "@/lib/app-store"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -738,6 +739,9 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
   const [pageError, setPageError] = useState("")
   const [actionError, setActionError] = useState("")
   const [actionMessage, setActionMessage] = useState("")
+  const [pushSupported, setPushSupported] = useState(false)
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
   const [activePage, setActivePage] = useState(initialPage)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -1014,6 +1018,39 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       ignore = true
     }
   }, [refreshToken, router])
+
+  useEffect(() => {
+    let ignore = false
+
+    async function loadPushState() {
+      if (!isPushSupported()) {
+        if (!ignore) {
+          setPushSupported(false)
+          setPushEnabled(false)
+        }
+        return
+      }
+
+      try {
+        const enabled = await getPushSubscriptionStatus()
+        if (!ignore) {
+          setPushSupported(true)
+          setPushEnabled(enabled)
+        }
+      } catch (error) {
+        if (!ignore) {
+          setPushSupported(true)
+          setPushEnabled(false)
+        }
+      }
+    }
+
+    loadPushState()
+
+    return () => {
+      ignore = true
+    }
+  }, [])
 
   async function retryLoad() {
     setIsLoading(true)
@@ -2288,6 +2325,31 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
       await handleCreateReminder()
     } catch (error) {
       setActionError(error.message || "Failed to save reminder.")
+    }
+  }
+
+  async function handleEnableBrowserNotifications() {
+    if (!pushSupported) {
+      setActionError("This browser does not support push notifications.")
+      return
+    }
+
+    setPushBusy(true)
+    setActionError("")
+    setActionMessage("")
+
+    try {
+      await subscribeToPushNotifications()
+      setPushEnabled(true)
+      toast({
+        title: "Browser notifications enabled",
+        description: "You will now receive portal alerts in this browser.",
+      })
+      setActionMessage("Browser notifications enabled successfully.")
+    } catch (error) {
+      setActionError(error.message || "Failed to enable browser notifications.")
+    } finally {
+      setPushBusy(false)
     }
   }
 
@@ -4221,6 +4283,15 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEnableBrowserNotifications}
+              disabled={!pushSupported || pushEnabled || pushBusy}
+              className="shrink-0"
+            >
+              {pushEnabled ? "Browser Alerts On" : pushBusy ? "Enabling..." : "Enable Browser Alerts"}
+            </Button>
             <ThemeToggle />
             <DropdownMenu onOpenChange={handleNotificationsOpenChange}>
               <DropdownMenuTrigger asChild>
@@ -4246,6 +4317,14 @@ export default function AdminDashboard({ initialPage = "dashboard" }) {
                     </DropdownMenuItem>
                   ))
                 )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled>
+                  {pushEnabled
+                    ? "Browser alerts enabled on this device"
+                    : pushSupported
+                      ? "Enable browser alerts from the header button"
+                      : "Browser alerts are not supported here"}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 

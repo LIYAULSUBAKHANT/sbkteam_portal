@@ -2,6 +2,7 @@ const db = require("../db");
 const { logActivity } = require("./activityLogController");
 const { emitDataChanged } = require("../socket");
 const { ensureDiscussionThread } = require("../services/discussionsService");
+const { createNotificationsForUsers } = require("../services/notificationService");
 
 let taskColumnSetCache = null;
 
@@ -96,6 +97,13 @@ async function createTask(req, res) {
       targetType: "task",
       targetId: createdTaskIds[0],
       targetLabel: title
+    });
+
+    await createNotificationsForUsers({
+      userIds: assigneeIds,
+      type: "task",
+      message: `New task assigned: ${title}`,
+      url: "/admin/dashboard",
     });
 
     for (const taskId of createdTaskIds) {
@@ -507,3 +515,4 @@ module.exports = {
   reviewTaskProof,
   deleteTask,
 };
+

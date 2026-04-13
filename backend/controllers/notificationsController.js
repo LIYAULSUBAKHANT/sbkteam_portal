@@ -2,20 +2,25 @@ const db = require("../db");
 const { logActivity } = require("./activityLogController");
 const { logInsertedTime, serializeRows } = require("../utils/datetime");
 const { emitDataChanged } = require("../socket");
+const { createNotificationsForUsers, hasPushConfig } = require("../services/notificationService");
 
 async function createNotification(req, res) {
   try {
-    const { user_id, type, message } = req.body;
+    const { user_id, user_ids, type, message } = req.body;
+    const normalizedUserIds = Array.isArray(user_ids)
+      ? [...new Set(user_ids.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0))]
+      : (Number.isInteger(Number(user_id)) && Number(user_id) > 0 ? [Number(user_id)] : []);
 
-    if (!user_id || !type || !message) {
-      return res.status(400).json({ message: "user_id, type, and message are required." });
+    if (normalizedUserIds.length === 0 || !type || !message) {
+      return res.status(400).json({ message: "At least one user_id, type, and message are required." });
     }
 
-    const [result] = await db.execute(
-      `INSERT INTO notifications (user_id, type, message, created_at)
-       VALUES (?, ?, ?, NOW())`,
-      [user_id, type, message]
-    );
+    const result = await createNotificationsForUsers({
+      userIds: normalizedUserIds,
+      type,
+      message,
+      url: "/admin/dashboard",
+    });
 
     logInsertedTime("Notification inserted");
 
@@ -23,15 +28,16 @@ async function createNotification(req, res) {
       userId: req.user.id,
       action: "created notification",
       targetType: "notification",
-      targetId: result.insertId,
+      targetId: normalizedUserIds[0],
       targetLabel: message
     });
 
-    emitDataChanged({ type: "notification", action: "create", data: { id: result.insertId, userId: Number(user_id) } });
+    emitDataChanged({ type: "notification", action: "create", data: { userIds: normalizedUserIds } });
 
     return res.status(201).json({
       message: "Notification created successfully.",
-      notificationId: result.insertId
+      recipientCount: result.created,
+      pushConfigured: hasPushConfig(),
     });
   } catch (error) {
     return res.status(500).json({ message: "Failed to create notification.", error: error.message });
